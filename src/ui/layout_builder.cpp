@@ -85,52 +85,55 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
     xml += "<Panel direction=\"row\" flexGrow=\"1\" background=\"#0B0F17\" padding=\"0,0,0,0\" alignItems=\"stretch\">";
 
     // -------------------------------------------------------------
-    // Left Sidebar (230px)
+    // Left Sidebar with ScrollViewer (236px)
     // -------------------------------------------------------------
-    xml += "<Panel direction=\"column\" width=\"230\" background=\"#111827\" padding=\"16,14,16,14\" spacing=\"14\" alignItems=\"stretch\">";
+    xml += "<ScrollViewer scrollY=\"true\" width=\"236\" background=\"#111827\">";
+    xml += "<Panel direction=\"column\" padding=\"6,8,6,8\" spacing=\"4\" alignItems=\"stretch\">";
 
     // Primary Nav Section
-    xml += "<Panel direction=\"column\" spacing=\"6\" alignItems=\"stretch\">";
-    xml += "<Label text=\"核心导航\" fontSize=\"11\" color=\"#64748B\" fontWeight=\"bold\" margin=\"0,0,4,4\" width=\"120\" />";
+    xml += "<Panel direction=\"column\" spacing=\"2\" alignItems=\"stretch\">";
+    xml += "<Label text=\"核心导航\" fontSize=\"11\" color=\"#64748B\" fontWeight=\"bold\" margin=\"0,0,2,0\" width=\"120\" />";
 
     // Tab 1: Generator
     bool isGen = (state.activeTab == ActiveTab::Generator && !state.isEditing);
     std::string genBg = isGen ? "#2563EB" : "transparent";
     std::string genFg = isGen ? "#FFFFFF" : "#94A3B8";
-    xml += "<Button text=\"⚡  密码生成器\" width=\"202\" height=\"38\" fontSize=\"13\" background=\"" + genBg + "\" foreground=\"" + genFg + "\" cornerRadius=\"8\" lockColors=\"true\" onClick=\"nav:generator\" />";
+    xml += "<Button text=\"⚡  密码生成器\" width=\"200\" height=\"32\" fontSize=\"13\" background=\"" + genBg + "\" foreground=\"" + genFg + "\" cornerRadius=\"7\" lockColors=\"true\" onClick=\"nav:generator\" />";
 
     // Tab 2: Vault
     bool isVault = (state.activeTab == ActiveTab::Vault && !state.isEditing);
     std::string vaultBg = isVault ? "#2563EB" : "transparent";
     std::string vaultFg = isVault ? "#FFFFFF" : "#94A3B8";
-    xml += "<Button text=\"❖  密码保险库\" width=\"202\" height=\"38\" fontSize=\"13\" background=\"" + vaultBg + "\" foreground=\"" + vaultFg + "\" cornerRadius=\"8\" lockColors=\"true\" onClick=\"nav:vault\" />";
+    xml += "<Button text=\"❖  密码保险库\" width=\"200\" height=\"32\" fontSize=\"13\" background=\"" + vaultBg + "\" foreground=\"" + vaultFg + "\" cornerRadius=\"7\" lockColors=\"true\" onClick=\"nav:vault\" />";
 
     // Tab 3: Favorites
     bool isFav = (state.activeTab == ActiveTab::Favorites && !state.isEditing);
     std::string favBg = isFav ? "#2563EB" : "transparent";
     std::string favFg = isFav ? "#FFFFFF" : "#94A3B8";
-    xml += "<Button text=\"★  收藏星标项\" width=\"202\" height=\"38\" fontSize=\"13\" background=\"" + favBg + "\" foreground=\"" + favFg + "\" cornerRadius=\"8\" lockColors=\"true\" onClick=\"nav:favorites\" />";
+    xml += "<Button text=\"★  收藏星标项\" width=\"200\" height=\"32\" fontSize=\"13\" background=\"" + favBg + "\" foreground=\"" + favFg + "\" cornerRadius=\"7\" lockColors=\"true\" onClick=\"nav:favorites\" />";
     xml += "</Panel>";
 
-    // Categories Section
-    xml += "<Panel direction=\"column\" spacing=\"4\" alignItems=\"stretch\" margin=\"8,0,0,0\">";
-    xml += "<Label text=\"分类快速筛选\" fontSize=\"11\" color=\"#64748B\" fontWeight=\"bold\" margin=\"0,0,4,4\" width=\"120\" />";
+    // Categories Section (2-column chips)
+    xml += "<Panel direction=\"column\" spacing=\"2\" alignItems=\"stretch\" margin=\"2,0,0,0\">";
+    xml += "<Label text=\"分类快速筛选\" fontSize=\"11\" color=\"#64748B\" fontWeight=\"bold\" margin=\"0,0,2,0\" width=\"120\" />";
 
     const wchar_t* categories[] = { L"全部", L"工作", L"社交", L"金融", L"邮箱", L"其它" };
-    for (const wchar_t* cat : categories) {
-        bool selected = (state.selectedCategory == cat);
-        std::string catBg = selected ? "#1E293B" : "transparent";
-        std::string catFg = selected ? "#38BDF8" : "#94A3B8";
-        std::string label = "•  " + WideToUtf8(cat);
-        xml += "<Button text=\"" + XmlEscape(label) + "\" width=\"202\" height=\"32\" fontSize=\"12\" background=\"" + catBg + "\" foreground=\"" + catFg + "\" cornerRadius=\"6\" lockColors=\"true\" onClick=\"cat:" + XmlEscape(cat) + "\" />";
+    for (size_t i = 0; i < 6; i += 2) {
+        xml += "<Panel direction=\"row\" spacing=\"6\" alignItems=\"center\">";
+        for (size_t j = i; j < i + 2 && j < 6; ++j) {
+            const wchar_t* cat = categories[j];
+            bool selected = (state.selectedCategory == cat);
+            std::string catBg = selected ? "#1E293B" : "transparent";
+            std::string catFg = selected ? "#38BDF8" : "#94A3B8";
+            std::string label = "• " + WideToUtf8(cat);
+            xml += "<Button text=\"" + XmlEscape(label) + "\" width=\"97\" height=\"25\" fontSize=\"12\" background=\"" + catBg + "\" foreground=\"" + catFg + "\" cornerRadius=\"6\" lockColors=\"true\" onClick=\"cat:" + XmlEscape(cat) + "\" />";
+        }
+        xml += "</Panel>";
     }
     xml += "</Panel>";
 
-    // Spacer
-    xml += "<Panel flexGrow=\"1\" />";
-
-    // Sidebar Bottom Info Card
-    xml += "<Panel direction=\"column\" background=\"#1E293B\" cornerRadius=\"10\" padding=\"12,12,12,12\" spacing=\"8\" alignItems=\"stretch\">";
+    // Sidebar Bottom Info Card (SQLite Monitor)
+    xml += "<Panel direction=\"column\" background=\"#1E293B\" cornerRadius=\"10\" padding=\"6,10,6,10\" spacing=\"3\" alignItems=\"stretch\" margin=\"2,0,0,0\">";
     xml += "<Label text=\"SQLite 存储监控\" fontSize=\"12\" color=\"#F8FAFC\" fontWeight=\"bold\" width=\"140\" />";
     xml += "<Panel direction=\"row\" justifyContent=\"spaceBetween\" alignItems=\"center\">";
     xml += "<Label text=\"密码总记录\" fontSize=\"12\" color=\"#94A3B8\" width=\"80\" />";
@@ -146,10 +149,11 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
         xml += "<Label text=\"" + std::to_string(state.stats.weakCount) + " 个\" fontSize=\"12\" color=\"#EF4444\" width=\"60\" />";
         xml += "</Panel>";
     }
-    xml += "<Button text=\"+ 新建密码记录\" width=\"178\" height=\"32\" fontSize=\"12\" background=\"#059669\" foreground=\"#FFFFFF\" cornerRadius=\"6\" lockColors=\"true\" onClick=\"vault:open_add\" margin=\"4,0,0,0\" />";
+    xml += "<Button text=\"+ 新建密码记录\" width=\"174\" height=\"26\" fontSize=\"12\" background=\"#059669\" foreground=\"#FFFFFF\" cornerRadius=\"6\" lockColors=\"true\" onClick=\"vault:open_add\" margin=\"2,0,0,0\" />";
     xml += "</Panel>";
 
-    xml += "</Panel>"; // Left Sidebar
+    xml += "</Panel>"; // Inner Panel
+    xml += "</ScrollViewer>"; // Left Sidebar ScrollViewer
 
     // -------------------------------------------------------------
     // Right Content Area
