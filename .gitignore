@@ -1,0 +1,37 @@
+# Build and Output Directories
+build/
+bin/
+out/
+
+# Visual Studio & IDE files
+.vs/
+*.user
+*.suo
+*.VC.db
+*.opendb
+*.sln.docstates
+
+# Compiled binaries and libraries
+*.obj
+*.res
+*.lib
+*.dll
+*.exe
+*.pdb
+*.ilk
+*.exp
+
+# SQLite local test databases
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Temporary screenshot files in root
+app_screenshot*.png
+app_generator.png
+screenshot.png
+
+# Keep resources
+!resources/
+!resources/*

@@ -1,0 +1,4 @@
+#include "resource.h"
+
+// Set icon with lowest ID so Explorer uses it as the default file icon
+IDI_APP_ICON ICON "../resources/app_icon.ico"
