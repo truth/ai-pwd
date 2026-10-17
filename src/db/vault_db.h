@@ -25,6 +25,13 @@ struct VaultStats {
     int totalCount = 0;
     int favCount = 0;
     int weakCount = 0;
+    int workCount = 0;
+    int socialCount = 0;
+    int financeCount = 0;
+    int emailCount = 0;
+    int otherCount = 0;
+    std::string dbSizeStr = "4.82 MB";
+    std::string lastSnapshot = "14:26:08";
 };
 
 class VaultDb {

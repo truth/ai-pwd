@@ -5,9 +5,9 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR pCmdLine, int cmdShow) 
     // Enable DPI Awareness
     SetProcessDPIAware();
 
-    // Ensure custom chrome and 1080x720 from process start to prevent resize animations
+    // Ensure custom chrome and 1180x820 from process start to prevent resize animations
     SetEnvironmentVariableW(L"AI_WIN_UI_CHROME", L"custom");
-    SetEnvironmentVariableW(L"AI_WIN_UI_SIZE", L"1080x720");
+    SetEnvironmentVariableW(L"AI_WIN_UI_SIZE", L"1180x820");
 
     pwd::AppController app(instance);
     if (!app.Initialize(pCmdLine ? pCmdLine : L"")) {

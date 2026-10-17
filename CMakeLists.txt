@@ -61,6 +61,7 @@ target_link_libraries(ai_pwd PRIVATE
     windowscodecs
     shlwapi
     comdlg32
+    comctl32
     shell32
     user32
     gdi32

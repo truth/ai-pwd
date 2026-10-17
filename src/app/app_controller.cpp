@@ -3,6 +3,7 @@
 #include "../resource.h"
 #include <shellapi.h>
 #include <dwmapi.h>
+#include <commctrl.h>
 #include <algorithm>
 
 namespace pwd {
@@ -11,6 +12,27 @@ namespace {
 
 constexpr wchar_t kAppClass[] = L"AiPwdAppClass";
 constexpr UINT WM_APP_ACTION = WM_APP + 10;
+
+LRESULT CALLBACK HostSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
+    if (uMsg == WM_SIZE || uMsg == WM_WINDOWPOSCHANGED) {
+        if (IsZoomed(hwnd)) {
+            SetWindowRgn(hwnd, nullptr, TRUE);
+        } else {
+            RECT rc{};
+            if (GetWindowRect(hwnd, &rc)) {
+                int width = rc.right - rc.left;
+                int height = rc.bottom - rc.top;
+                if (width > 0 && height > 0) {
+                    HRGN rgn = CreateRoundRectRgn(0, 0, width + 1, height + 1, 16, 16);
+                    SetWindowRgn(hwnd, rgn, TRUE);
+                }
+            }
+        }
+    } else if (uMsg == WM_NCDESTROY) {
+        RemoveWindowSubclass(hwnd, HostSubclassProc, uIdSubclass);
+    }
+    return DefSubclassProc(hwnd, uMsg, wParam, lParam);
+}
 
 } // namespace
 
@@ -125,7 +147,7 @@ void AppController::ShowToast(const std::wstring& msg, const std::string& color)
 }
 
 void AppController::RecreateHost() {
-    int x = 80, y = 80, w = 1080, h = 720;
+    int x = 80, y = 80, w = 1180, h = 820;
     bool hasPos = false;
     if (m_host && !m_host->IsClosed()) {
         if (HWND hwnd = m_host->GetHwnd()) {
@@ -172,15 +194,27 @@ void AppController::RecreateHost() {
             DwmSetWindowAttribute(newHwnd, 20, &useDarkMode, sizeof(useDarkMode));
             DwmSetWindowAttribute(newHwnd, 19, &useDarkMode, sizeof(useDarkMode));
 
-            // 2. Suppress/colorize DWM border to dark tone (#1E293B)
+            // 2. Windows 11 DWM rounded corners preference (DWMWA_WINDOW_CORNER_PREFERENCE = 33, DWMWCP_ROUND = 2)
+            DWORD cornerPreference = 2; // DWMWCP_ROUND
+            DwmSetWindowAttribute(newHwnd, 33, &cornerPreference, sizeof(cornerPreference));
+
+            // 3. Suppress/colorize DWM border to dark tone (#1E293B)
             COLORREF darkBorder = RGB(30, 41, 59);
             DwmSetWindowAttribute(newHwnd, 34 /* DWMWA_BORDER_COLOR */, &darkBorder, sizeof(darkBorder));
 
-            // 3. Set window class background brush to dark so it never paints white
+            // 4. Set window class background brush to dark so it never paints white
             static HBRUSH s_darkBrush = CreateSolidBrush(RGB(11, 15, 23));
             SetClassLongPtrW(newHwnd, GCLP_HBRBACKGROUND, reinterpret_cast<LONG_PTR>(s_darkBrush));
 
             SetWindowPos(newHwnd, nullptr, x, y, w, h, (hasPos ? 0 : SWP_NOMOVE) | SWP_NOZORDER);
+
+            // 5. Apply rounded corner window region (16px radius) and hook dynamic resize/maximize
+            if (!IsZoomed(newHwnd)) {
+                HRGN rgn = CreateRoundRectRgn(0, 0, w + 1, h + 1, 16, 16);
+                SetWindowRgn(newHwnd, rgn, TRUE);
+            }
+            SetWindowSubclass(newHwnd, HostSubclassProc, 1001, 0);
+
             HICON hIcon = LoadIconW(m_instance, MAKEINTRESOURCEW(IDI_APP_ICON));
             if (hIcon) {
                 SendMessageW(newHwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
@@ -236,6 +270,35 @@ void AppController::HandleAction(const std::string& id) {
     }
     if (id == "windowClose") {
         PostQuitMessage(0);
+        return;
+    }
+
+    // ---------------------------------------------------------
+    // Theme Switcher Actions
+    // ---------------------------------------------------------
+    if (id == "theme:blue") {
+        m_state.theme = ThemeColor::Blue;
+        RecreateHost();
+        return;
+    }
+    if (id == "theme:purple") {
+        m_state.theme = ThemeColor::Purple;
+        RecreateHost();
+        return;
+    }
+    if (id == "theme:cyan") {
+        m_state.theme = ThemeColor::Cyan;
+        RecreateHost();
+        return;
+    }
+    if (id == "theme:emerald") {
+        m_state.theme = ThemeColor::Emerald;
+        RecreateHost();
+        return;
+    }
+    if (id == "theme:amber") {
+        m_state.theme = ThemeColor::Amber;
+        RecreateHost();
         return;
     }
 
@@ -417,12 +480,11 @@ void AppController::HandleAction(const std::string& id) {
     // ---------------------------------------------------------
     if (id == "gen:refresh") {
         m_state.currentAssessment = PasswordGenerator::Generate(m_state.genOptions);
-        if (m_host) {
-            m_host->SetElementText("gen_pwd_val", m_state.currentAssessment.password.c_str());
-            std::wstring strengthStr = m_state.currentAssessment.label + L" (" + std::to_wstring(static_cast<int>(m_state.currentAssessment.entropyBits)) + L" bits)";
-            m_host->SetElementText("gen_strength_val", strengthStr.c_str());
-            return;
-        }
+        RecreateHost();
+        return;
+    }
+    if (id == "gen:toggle_eye") {
+        m_state.generatorRevealed = !m_state.generatorRevealed;
         RecreateHost();
         return;
     }
