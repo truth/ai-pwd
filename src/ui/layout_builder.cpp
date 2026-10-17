@@ -125,7 +125,7 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
     // -------------------------------------------------------------
     // 1. Top Custom Title Bar (46px)
     // -------------------------------------------------------------
-    xml += "<Panel role=\"titleBar\" hitTest=\"caption\" direction=\"row\" height=\"46\" background=\"#0B0F17\" padding=\"0,14,0,14\" alignItems=\"center\" justifyContent=\"spaceBetween\">";
+    xml += "<Panel role=\"titleBar\" hitTest=\"caption\" direction=\"row\" height=\"46\" background=\"#0B0F17\" padding=\"14,0,14,0\" alignItems=\"center\" justifyContent=\"spaceBetween\">";
     
     // Left: Logo & Title & Security Encryption Badge
     xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"8\" hitTest=\"caption\" height=\"46\">";
@@ -136,7 +136,7 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
     xml += "<Label text=\"(AI-Pwd)\" fontSize=\"11\" color=\"#64748B\" width=\"80\" height=\"20\" ellipsis=\"true\" />";
     
     // SQLite AES-256-GCM Badge
-    xml += "<Panel height=\"26\" background=\"#062F28\" cornerRadius=\"13\" padding=\"0,12,0,12\" margin=\"0,0,0,4\" alignItems=\"center\" direction=\"row\" spacing=\"6\">";
+    xml += "<Panel height=\"26\" background=\"#062F28\" cornerRadius=\"13\" padding=\"12,0,12,0\" margin=\"0,0,0,4\" alignItems=\"center\" direction=\"row\" spacing=\"6\">";
     xml += "<Panel width=\"6\" height=\"6\" cornerRadius=\"3\" background=\"#10B981\" />";
     xml += "<Label name=\"app_status_badge\" text=\"SQLite 本地加密存储 (AES-256-GCM)\" fontSize=\"11\" color=\"#34D399\" width=\"250\" height=\"16\" ellipsis=\"true\" />";
     xml += "</Panel>";
@@ -193,35 +193,38 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
     // Left Sidebar with ScrollViewer (236px)
     // -------------------------------------------------------------
     xml += "<ScrollViewer scrollY=\"true\" width=\"236\" background=\"#0A0E17\">";
-    xml += "<Panel direction=\"column\" padding=\"8,10,8,10\" spacing=\"5\" alignItems=\"stretch\">";
+    xml += "<Panel direction=\"column\" padding=\"10,10,10,10\" spacing=\"6\" alignItems=\"stretch\">";
 
     // Primary Nav Section
-    xml += "<Panel direction=\"column\" spacing=\"3\" alignItems=\"stretch\">";
-    xml += "<Label text=\"核心导航\" fontSize=\"11\" color=\"#64748B\" fontWeight=\"bold\" margin=\"0,0,3,2\" width=\"120\" />";
+    xml += "<Panel direction=\"column\" padding=\"0,0,0,0\" spacing=\"4\" alignItems=\"stretch\">";
+    xml += "<Panel direction=\"row\" padding=\"0,0,0,0\" alignItems=\"center\" spacing=\"6\" height=\"20\">";
+    xml += "<Panel width=\"3\" height=\"12\" background=\"" + theme.primary + "\" cornerRadius=\"2\" />";
+    xml += "<Label text=\"核心导航\" fontSize=\"12\" color=\"#94A3B8\" fontWeight=\"bold\" width=\"120\" height=\"18\" ellipsis=\"true\" />";
+    xml += "</Panel>";
 
     // Tab 1: Generator
     bool isGen = (state.activeTab == ActiveTab::Generator && !state.isEditing);
     if (isGen) {
-        xml += "<Panel direction=\"row\" width=\"200\" height=\"36\" background=\"" + theme.primary + "\" cornerRadius=\"8\" padding=\"0,12,0,12\" alignItems=\"center\" justifyContent=\"spaceBetween\" onClick=\"nav:generator\">";
-        xml += "<Label text=\"⚡  密码生成器\" fontSize=\"13\" color=\"#FFFFFF\" fontWeight=\"bold\" width=\"150\" />";
+        xml += "<Panel direction=\"row\" width=\"200\" height=\"36\" background=\"" + theme.primary + "\" cornerRadius=\"8\" padding=\"12,0,12,0\" alignItems=\"center\" justifyContent=\"spaceBetween\" onClick=\"nav:generator\">";
+        xml += "<Label text=\"⚡  密码生成器\" fontSize=\"13\" color=\"#FFFFFF\" fontWeight=\"bold\" width=\"150\" height=\"20\" ellipsis=\"true\" />";
         xml += "<Panel width=\"6\" height=\"6\" cornerRadius=\"3\" background=\"#FFFFFF\" />";
         xml += "</Panel>";
     } else {
-        xml += "<Panel direction=\"row\" width=\"200\" height=\"36\" background=\"transparent\" cornerRadius=\"8\" padding=\"0,12,0,12\" alignItems=\"center\" justifyContent=\"spaceBetween\" onClick=\"nav:generator\">";
-        xml += "<Label text=\"⚡  密码生成器\" fontSize=\"13\" color=\"#94A3B8\" width=\"150\" />";
+        xml += "<Panel direction=\"row\" width=\"200\" height=\"36\" background=\"transparent\" cornerRadius=\"8\" padding=\"12,0,12,0\" alignItems=\"center\" justifyContent=\"spaceBetween\" onClick=\"nav:generator\">";
+        xml += "<Label text=\"⚡  密码生成器\" fontSize=\"13\" color=\"#94A3B8\" width=\"150\" height=\"20\" ellipsis=\"true\" />";
         xml += "</Panel>";
     }
 
     // Tab 2: Vault
     bool isVault = (state.activeTab == ActiveTab::Vault && !state.isEditing);
     if (isVault) {
-        xml += "<Panel direction=\"row\" width=\"200\" height=\"36\" background=\"" + theme.primary + "\" cornerRadius=\"8\" padding=\"0,12,0,12\" alignItems=\"center\" justifyContent=\"spaceBetween\" onClick=\"nav:vault\">";
-        xml += "<Label text=\"🔒  密码保险库\" fontSize=\"13\" color=\"#FFFFFF\" fontWeight=\"bold\" width=\"150\" />";
+        xml += "<Panel direction=\"row\" width=\"200\" height=\"36\" background=\"" + theme.primary + "\" cornerRadius=\"8\" padding=\"12,0,12,0\" alignItems=\"center\" justifyContent=\"spaceBetween\" onClick=\"nav:vault\">";
+        xml += "<Label text=\"🔒  密码保险库\" fontSize=\"13\" color=\"#FFFFFF\" fontWeight=\"bold\" width=\"150\" height=\"20\" ellipsis=\"true\" />";
         xml += "<Panel width=\"6\" height=\"6\" cornerRadius=\"3\" background=\"#FFFFFF\" />";
         xml += "</Panel>";
     } else {
-        xml += "<Panel direction=\"row\" width=\"200\" height=\"36\" background=\"transparent\" cornerRadius=\"8\" padding=\"0,12,0,12\" alignItems=\"center\" justifyContent=\"spaceBetween\" onClick=\"nav:vault\">";
-        xml += "<Label text=\"🔒  密码保险库\" fontSize=\"13\" color=\"#94A3B8\" width=\"130\" />";
+        xml += "<Panel direction=\"row\" width=\"200\" height=\"36\" background=\"transparent\" cornerRadius=\"8\" padding=\"12,0,12,0\" alignItems=\"center\" justifyContent=\"spaceBetween\" onClick=\"nav:vault\">";
+        xml += "<Label text=\"🔒  密码保险库\" fontSize=\"13\" color=\"#94A3B8\" width=\"130\" height=\"20\" ellipsis=\"true\" />";
         xml += "<Panel width=\"32\" height=\"20\" background=\"#1E293B\" cornerRadius=\"10\" alignItems=\"center\" justifyContent=\"center\"><Label text=\"" + std::to_string(state.stats.totalCount) + "\" fontSize=\"11\" color=\"#94A3B8\" width=\"24\" align=\"center\" /></Panel>";
         xml += "</Panel>";
     }
@@ -229,21 +232,24 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
     // Tab 3: Favorites
     bool isFav = (state.activeTab == ActiveTab::Favorites && !state.isEditing);
     if (isFav) {
-        xml += "<Panel direction=\"row\" width=\"200\" height=\"36\" background=\"" + theme.primary + "\" cornerRadius=\"8\" padding=\"0,12,0,12\" alignItems=\"center\" justifyContent=\"spaceBetween\" onClick=\"nav:favorites\">";
-        xml += "<Label text=\"★  收藏星标项\" fontSize=\"13\" color=\"#FFFFFF\" fontWeight=\"bold\" width=\"150\" />";
+        xml += "<Panel direction=\"row\" width=\"200\" height=\"36\" background=\"" + theme.primary + "\" cornerRadius=\"8\" padding=\"12,0,12,0\" alignItems=\"center\" justifyContent=\"spaceBetween\" onClick=\"nav:favorites\">";
+        xml += "<Label text=\"★  收藏星标项\" fontSize=\"13\" color=\"#FFFFFF\" fontWeight=\"bold\" width=\"150\" height=\"20\" ellipsis=\"true\" />";
         xml += "<Panel width=\"6\" height=\"6\" cornerRadius=\"3\" background=\"#FFFFFF\" />";
         xml += "</Panel>";
     } else {
-        xml += "<Panel direction=\"row\" width=\"200\" height=\"36\" background=\"transparent\" cornerRadius=\"8\" padding=\"0,12,0,12\" alignItems=\"center\" justifyContent=\"spaceBetween\" onClick=\"nav:favorites\">";
-        xml += "<Label text=\"★  收藏星标项\" fontSize=\"13\" color=\"#94A3B8\" width=\"130\" />";
+        xml += "<Panel direction=\"row\" width=\"200\" height=\"36\" background=\"transparent\" cornerRadius=\"8\" padding=\"12,0,12,0\" alignItems=\"center\" justifyContent=\"spaceBetween\" onClick=\"nav:favorites\">";
+        xml += "<Label text=\"★  收藏星标项\" fontSize=\"13\" color=\"#94A3B8\" width=\"130\" height=\"20\" ellipsis=\"true\" />";
         xml += "<Panel width=\"32\" height=\"20\" background=\"#3B280E\" cornerRadius=\"10\" alignItems=\"center\" justifyContent=\"center\"><Label text=\"" + std::to_string(state.stats.favCount) + "\" fontSize=\"11\" color=\"#FBBF24\" width=\"24\" align=\"center\" /></Panel>";
         xml += "</Panel>";
     }
     xml += "</Panel>"; // Nav section
 
     // Categories Section with colored dots & count badges
-    xml += "<Panel direction=\"column\" spacing=\"1\" alignItems=\"stretch\" margin=\"2,0,0,0\">";
-    xml += "<Label text=\"分类快速筛选\" fontSize=\"11\" color=\"#64748B\" fontWeight=\"bold\" margin=\"0,0,3,2\" width=\"120\" />";
+    xml += "<Panel direction=\"column\" padding=\"0,0,0,0\" spacing=\"3\" alignItems=\"stretch\" margin=\"0,4,0,0\">";
+    xml += "<Panel direction=\"row\" padding=\"0,0,0,0\" alignItems=\"center\" spacing=\"6\" height=\"20\">";
+    xml += "<Panel width=\"3\" height=\"12\" background=\"" + theme.accent + "\" cornerRadius=\"2\" />";
+    xml += "<Label text=\"分类快速筛选\" fontSize=\"12\" color=\"#94A3B8\" fontWeight=\"bold\" width=\"120\" height=\"18\" ellipsis=\"true\" />";
+    xml += "</Panel>";
 
     struct CategoryMeta {
         const wchar_t* key;
@@ -267,38 +273,38 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
         std::string countColor = selected ? "#E2E8F0" : "#475569";
         std::string act = "cat:" + XmlEscape(c.key);
 
-        xml += "<Panel direction=\"row\" width=\"200\" height=\"27\" background=\"" + bg + "\" cornerRadius=\"6\" padding=\"0,8,0,8\" alignItems=\"center\" justifyContent=\"spaceBetween\" onClick=\"" + act + "\">";
-        xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"8\">";
+        xml += "<Panel direction=\"row\" width=\"200\" height=\"28\" background=\"" + bg + "\" cornerRadius=\"6\" padding=\"8,0,8,0\" alignItems=\"center\" justifyContent=\"spaceBetween\" onClick=\"" + act + "\">";
+        xml += "<Panel direction=\"row\" padding=\"0,0,0,0\" alignItems=\"center\" spacing=\"8\">";
         xml += "<Panel width=\"8\" height=\"8\" cornerRadius=\"4\" background=\"" + std::string(c.dotColor) + "\" />";
-        xml += "<Label text=\"" + std::string(c.label) + "\" fontSize=\"12\" color=\"" + fg + "\" width=\"90\" />";
+        xml += "<Label text=\"" + std::string(c.label) + "\" fontSize=\"12\" color=\"" + fg + "\" width=\"90\" height=\"18\" ellipsis=\"true\" />";
         xml += "</Panel>";
-        xml += "<Label text=\"" + std::to_string(c.count) + "\" fontSize=\"11\" color=\"" + countColor + "\" width=\"30\" align=\"right\" />";
+        xml += "<Label text=\"" + std::to_string(c.count) + "\" fontSize=\"11\" color=\"" + countColor + "\" width=\"30\" height=\"18\" align=\"right\" ellipsis=\"true\" />";
         xml += "</Panel>";
     }
     xml += "</Panel>"; // Categories
 
     // Sidebar Bottom Info Card (SQLite Monitor)
-    xml += "<Panel direction=\"column\" width=\"200\" background=\"#0C121E\" cornerRadius=\"10\" padding=\"8,10,8,10\" spacing=\"4\" alignItems=\"stretch\" margin=\"4,0,2,0\">";
-    xml += "<Panel direction=\"row\" justifyContent=\"spaceBetween\" alignItems=\"center\">";
-    xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"6\">";
-    xml += "<Label text=\"🗄  SQLite 存储监控\" fontSize=\"12\" color=\"#F8FAFC\" fontWeight=\"bold\" width=\"130\" />";
+    xml += "<Panel direction=\"column\" width=\"200\" background=\"#0C121E\" cornerRadius=\"10\" padding=\"10,8,10,8\" spacing=\"4\" alignItems=\"stretch\" margin=\"0,6,0,0\">";
+    xml += "<Panel direction=\"row\" padding=\"0,0,0,0\" justifyContent=\"spaceBetween\" alignItems=\"center\">";
+    xml += "<Panel direction=\"row\" padding=\"0,0,0,0\" alignItems=\"center\" spacing=\"6\">";
+    xml += "<Label text=\"🗄  SQLite 存储监控\" fontSize=\"12\" color=\"#F8FAFC\" fontWeight=\"bold\" width=\"130\" height=\"18\" ellipsis=\"true\" />";
     xml += "</Panel>";
     xml += "<Panel width=\"8\" height=\"8\" cornerRadius=\"4\" background=\"#10B981\" />";
     xml += "</Panel>";
 
-    xml += "<Panel direction=\"row\" justifyContent=\"spaceBetween\" alignItems=\"center\">";
-    xml += "<Label text=\"状态 :\" fontSize=\"11\" color=\"#64748B\" width=\"50\" />";
-    xml += "<Label text=\"已加密 · 同步正常\" fontSize=\"11\" color=\"#10B981\" fontWeight=\"bold\" width=\"110\" align=\"right\" />";
+    xml += "<Panel direction=\"row\" padding=\"0,0,0,0\" justifyContent=\"spaceBetween\" alignItems=\"center\">";
+    xml += "<Label text=\"状态 :\" fontSize=\"11\" color=\"#64748B\" width=\"50\" height=\"16\" ellipsis=\"true\" />";
+    xml += "<Label text=\"已加密 · 同步正常\" fontSize=\"11\" color=\"#10B981\" fontWeight=\"bold\" width=\"110\" height=\"16\" align=\"right\" ellipsis=\"true\" />";
     xml += "</Panel>";
 
-    xml += "<Panel direction=\"row\" justifyContent=\"spaceBetween\" alignItems=\"center\">";
-    xml += "<Label text=\"数据库体积 :\" fontSize=\"11\" color=\"#64748B\" width=\"75\" />";
-    xml += "<Label text=\"" + state.stats.dbSizeStr + "\" fontSize=\"11\" color=\"#38BDF8\" width=\"85\" align=\"right\" />";
+    xml += "<Panel direction=\"row\" padding=\"0,0,0,0\" justifyContent=\"spaceBetween\" alignItems=\"center\">";
+    xml += "<Label text=\"数据库体积 :\" fontSize=\"11\" color=\"#64748B\" width=\"75\" height=\"16\" ellipsis=\"true\" />";
+    xml += "<Label text=\"" + state.stats.dbSizeStr + "\" fontSize=\"11\" color=\"#38BDF8\" width=\"85\" height=\"16\" align=\"right\" ellipsis=\"true\" />";
     xml += "</Panel>";
 
-    xml += "<Panel direction=\"row\" justifyContent=\"spaceBetween\" alignItems=\"center\">";
-    xml += "<Label text=\"最新快照 :\" fontSize=\"11\" color=\"#64748B\" width=\"75\" />";
-    xml += "<Label text=\"" + state.stats.lastSnapshot + "\" fontSize=\"11\" color=\"#64748B\" width=\"85\" align=\"right\" />";
+    xml += "<Panel direction=\"row\" padding=\"0,0,0,0\" justifyContent=\"spaceBetween\" alignItems=\"center\">";
+    xml += "<Label text=\"最新快照 :\" fontSize=\"11\" color=\"#64748B\" width=\"75\" height=\"16\" ellipsis=\"true\" />";
+    xml += "<Label text=\"" + state.stats.lastSnapshot + "\" fontSize=\"11\" color=\"#64748B\" width=\"85\" height=\"16\" align=\"right\" ellipsis=\"true\" />";
     xml += "</Panel>";
     xml += "</Panel>"; // SQLite Monitor Card
 
@@ -440,7 +446,7 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
         xml += "</Panel>";
 
         // Big Password Text Box with Syntax Highlighting & Eye/Refresh buttons
-        xml += "<Panel direction=\"row\" height=\"52\" background=\"#070A10\" cornerRadius=\"8\" padding=\"0,14,0,14\" alignItems=\"center\" justifyContent=\"spaceBetween\">";
+        xml += "<Panel direction=\"row\" height=\"52\" background=\"#070A10\" cornerRadius=\"8\" padding=\"14,0,14,0\" alignItems=\"center\" justifyContent=\"spaceBetween\">";
         
         if (!state.generatorRevealed) {
             std::string masked(state.currentAssessment.password.empty() ? 16 : state.currentAssessment.password.size(), '*');
@@ -596,7 +602,7 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
             std::string chkBg = isChecked ? theme.accent : "#162032";
             std::string chkText = isChecked ? "✔" : "";
 
-            xml += "<Panel direction=\"row\" flexGrow=\"1\" height=\"32\" background=\"#0C1322\" cornerRadius=\"6\" padding=\"0,8,0,8\" alignItems=\"center\" justifyContent=\"spaceBetween\" onClick=\"" + std::string(action) + "\">";
+            xml += "<Panel direction=\"row\" flexGrow=\"1\" height=\"32\" background=\"#0C1322\" cornerRadius=\"6\" padding=\"8,0,8,0\" alignItems=\"center\" justifyContent=\"spaceBetween\" onClick=\"" + std::string(action) + "\">";
             xml += "<Panel direction=\"row\" padding=\"0,0,0,0\" alignItems=\"center\" spacing=\"8\">";
             xml += "<Panel background=\"" + std::string(badgeBg) + "\" cornerRadius=\"4\" padding=\"1,5,1,5\">";
             xml += "<Label text=\"" + XmlEscape(std::string(badge)) + "\" fontSize=\"10\" color=\"" + std::string(badgeFg) + "\" fontWeight=\"bold\" width=\"32\" align=\"center\" ellipsis=\"true\" />";
@@ -630,7 +636,7 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
             bool isChecked = state.genOptions.excludeAmbiguous;
             std::string chkBg = isChecked ? theme.accent : "#162032";
 
-            xml += "<Panel direction=\"row\" height=\"38\" background=\"#0C1322\" cornerRadius=\"6\" padding=\"0,8,0,8\" alignItems=\"center\" justifyContent=\"spaceBetween\" onClick=\"gen:opt:ambiguous\">";
+            xml += "<Panel direction=\"row\" height=\"38\" background=\"#0C1322\" cornerRadius=\"6\" padding=\"8,0,8,0\" alignItems=\"center\" justifyContent=\"spaceBetween\" onClick=\"gen:opt:ambiguous\">";
             xml += "<Panel direction=\"row\" padding=\"0,0,0,0\" alignItems=\"center\" spacing=\"8\">";
             xml += "<Panel background=\"#1E293B\" cornerRadius=\"4\" padding=\"1,5,1,5\">";
             xml += "<Label text=\"1/I/0\" fontSize=\"10\" color=\"#94A3B8\" fontWeight=\"bold\" width=\"32\" align=\"center\" ellipsis=\"true\" />";
