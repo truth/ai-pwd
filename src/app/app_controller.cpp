@@ -134,7 +134,27 @@ LRESULT CALLBACK AppController::ShellWndProc(HWND hwnd, UINT msg, WPARAM wParam,
             return 0;
         }
 
+        case WM_ACTIVATE: {
+            if (LOWORD(wParam) != WA_INACTIVE && app && app->m_host && !app->m_host->IsClosed()) {
+                HWND childHwnd = app->m_host->GetHwnd();
+                if (childHwnd) {
+                    if (IsIconic(childHwnd)) {
+                        ShowWindow(childHwnd, SW_RESTORE);
+                    }
+                    if (!IsWindowVisible(childHwnd)) {
+                        ShowWindow(childHwnd, SW_SHOW);
+                    }
+                    app->m_host->FitToParent();
+                    InvalidateRect(childHwnd, nullptr, TRUE);
+                }
+            }
+            break;
+        }
+
         case WM_SIZE: {
+            if (wParam == SIZE_MINIMIZED) {
+                return 0; // Do not resize child to 0x0 while shell is minimized
+            }
             RECT rc{};
             if (GetClientRect(hwnd, &rc)) {
                 int width = rc.right - rc.left;
@@ -147,7 +167,27 @@ LRESULT CALLBACK AppController::ShellWndProc(HWND hwnd, UINT msg, WPARAM wParam,
                 }
             }
             if (app && app->m_host && !app->m_host->IsClosed()) {
+                HWND childHwnd = app->m_host->GetHwnd();
+                if (childHwnd) {
+                    if (IsIconic(childHwnd)) {
+                        ShowWindow(childHwnd, SW_RESTORE);
+                    }
+                    if (!IsWindowVisible(childHwnd)) {
+                        ShowWindow(childHwnd, SW_SHOW);
+                    }
+                    // Keep child WS_MAXIMIZE style in sync with parent shell so IsZoomed(childHwnd)
+                    // accurately reflects maximized state for caption glyph rendering (restore vs maximize).
+                    LONG_PTR style = GetWindowLongPtrW(childHwnd, GWL_STYLE);
+                    if (IsZoomed(hwnd)) {
+                        SetWindowLongPtrW(childHwnd, GWL_STYLE, style | WS_MAXIMIZE);
+                    } else {
+                        SetWindowLongPtrW(childHwnd, GWL_STYLE, style & ~WS_MAXIMIZE);
+                    }
+                }
                 app->m_host->FitToParent();
+                if (childHwnd) {
+                    InvalidateRect(childHwnd, nullptr, TRUE);
+                }
             }
             return 0;
         }
@@ -179,6 +219,17 @@ LRESULT CALLBACK AppController::ChildHostSubclassProc(HWND hwnd, UINT uMsg, WPAR
     HWND shellWnd = app ? app->m_shellWnd : GetParent(hwnd);
 
     switch (uMsg) {
+        case WM_SYSCOMMAND: {
+            WPARAM cmd = wParam & 0xFFF0;
+            if (cmd == SC_MINIMIZE || cmd == SC_MAXIMIZE || cmd == SC_RESTORE || cmd == SC_CLOSE) {
+                if (shellWnd) {
+                    SendMessageW(shellWnd, WM_SYSCOMMAND, wParam, lParam);
+                    return 0;
+                }
+            }
+            break;
+        }
+
         case WM_NCHITTEST: {
             if (shellWnd && !IsZoomed(shellWnd)) {
                 POINT screenPt{GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
@@ -199,10 +250,12 @@ LRESULT CALLBACK AppController::ChildHostSubclassProc(HWND hwnd, UINT uMsg, WPAR
         case WM_LBUTTONDOWN: {
             int y = GET_Y_LPARAM(lParam);
             int x = GET_X_LPARAM(lParam);
+            RECT rc{};
+            GetClientRect(hwnd, &rc);
             // Title bar height is 46px.
-            // On the right (x >= 620): theme switcher dots and caption buttons must receive direct clicks.
-            // Left region (x < 620): title, logo, and empty caption initiates smooth native caption dragging on shellWnd!
-            if (y >= 0 && y < 46 && x < 620) {
+            // Right controls take the rightmost ~300px (theme switcher dots + caption buttons).
+            // Everything to the left of (rc.right - 300) initiates smooth native caption dragging on shellWnd!
+            if (y >= 0 && y < 46 && x < (rc.right - 300)) {
                 ReleaseCapture();
                 SendMessageW(shellWnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
                 return 0;
@@ -213,7 +266,9 @@ LRESULT CALLBACK AppController::ChildHostSubclassProc(HWND hwnd, UINT uMsg, WPAR
         case WM_LBUTTONDBLCLK: {
             int y = GET_Y_LPARAM(lParam);
             int x = GET_X_LPARAM(lParam);
-            if (y >= 0 && y < 46 && x < 620) {
+            RECT rc{};
+            GetClientRect(hwnd, &rc);
+            if (y >= 0 && y < 46 && x < (rc.right - 300)) {
                 if (shellWnd) {
                     ShowWindow(shellWnd, IsZoomed(shellWnd) ? SW_RESTORE : SW_MAXIMIZE);
                 }
@@ -435,20 +490,24 @@ void AppController::HandleAction(const std::string& id) {
     // ---------------------------------------------------------
     // Window Chrome Actions
     // ---------------------------------------------------------
-    if (id == "windowMinimize") {
+    if (id == "app:windowMinimize" || id == "windowMinimize") {
         if (m_shellWnd) {
             ShowWindow(m_shellWnd, SW_MINIMIZE);
         }
         return;
     }
-    if (id == "windowMaximize") {
+    if (id == "app:windowMaximize" || id == "windowMaximize") {
         if (m_shellWnd) {
             ShowWindow(m_shellWnd, IsZoomed(m_shellWnd) ? SW_RESTORE : SW_MAXIMIZE);
         }
         return;
     }
-    if (id == "windowClose") {
-        PostQuitMessage(0);
+    if (id == "app:windowClose" || id == "windowClose") {
+        if (m_shellWnd) {
+            PostMessageW(m_shellWnd, WM_CLOSE, 0, 0);
+        } else {
+            PostQuitMessage(0);
+        }
         return;
     }
 

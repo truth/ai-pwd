@@ -269,9 +269,9 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
 
     // Window Caption Controls
     xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"2\" hitTest=\"client\" width=\"108\">";
-    xml += "<Button variant=\"caption-minimize\" width=\"34\" height=\"30\" hitTest=\"client\" onClick=\"windowMinimize\" />";
-    xml += "<Button variant=\"caption-maximize\" width=\"34\" height=\"30\" hitTest=\"client\" onClick=\"windowMaximize\" />";
-    xml += "<Button variant=\"caption-close\" width=\"38\" height=\"30\" hitTest=\"client\" onClick=\"windowClose\" />";
+    xml += "<Button variant=\"caption-minimize\" width=\"34\" height=\"30\" hitTest=\"client\" onClick=\"app:windowMinimize\" />";
+    xml += "<Button variant=\"caption-maximize\" width=\"34\" height=\"30\" hitTest=\"client\" onClick=\"app:windowMaximize\" />";
+    xml += "<Button variant=\"caption-close\" width=\"38\" height=\"30\" hitTest=\"client\" onClick=\"app:windowClose\" />";
     xml += "</Panel>";
     xml += "</Panel>"; // Right Title controls
     xml += "</Panel>"; // Title Bar
