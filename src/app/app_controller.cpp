@@ -405,9 +405,9 @@ LRESULT CALLBACK AppController::ChildHostSubclassProc(HWND hwnd, UINT uMsg, WPAR
             UINT dpi = GetWindowDpiHelper(hwnd);
             float scale = (dpi > 0 ? dpi : 96) / 96.0f;
             int titleBarHeight = static_cast<int>(46.0f * scale + 0.5f);
-            // Right controls: Theme Switcher (182 DIP) + gap (14 DIP) + Caption Buttons (112 DIP) + right margin (14 DIP) = 322 DIPs.
-            // Allow a small safety margin of 335 DIPs so all buttons are responsive.
-            int rightControlsWidth = static_cast<int>(335.0f * scale + 0.5f);
+            // Right controls: Theme Switcher (204 DIP) + gap (14 DIP) + Caption Buttons (112 DIP) + right margin (14 DIP) = 344 DIPs.
+            // Allow a small safety margin of 355 DIPs so all theme dots and caption buttons are fully clickable.
+            int rightControlsWidth = static_cast<int>(355.0f * scale + 0.5f);
 
             if (y >= 0 && y < titleBarHeight && x < (rc.right - rightControlsWidth)) {
                 ReleaseCapture();

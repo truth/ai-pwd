@@ -237,12 +237,12 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
     xml += "</Panel>";
     xml += "</Panel>"; // Left
 
-    // Right: Theme Color Dots Switcher + Minimize / Maximize / Close Buttons (Fixed 310 DIPs)
-    xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"14\" hitTest=\"client\" width=\"310\">";
+    // Right: Theme Color Dots Switcher + Minimize / Maximize / Close Buttons (Fixed 332 DIPs)
+    xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"14\" hitTest=\"client\" width=\"332\" minWidth=\"332\" padding=\"0,0,0,0\">";
     
-    // Theme Switcher Component (58 label + 6 + 5*18 dots + 4*6 gaps = 178 DIPs)
-    xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"6\" hitTest=\"client\" width=\"182\">";
-    xml += "<Label text=\"🎨 主题色:\" fontSize=\"11\" color=\"#64748B\" fontWeight=\"bold\" width=\"58\" height=\"16\" ellipsis=\"true\" />";
+    // Theme Switcher Component (76 label + 6 + 5*18 dots + 4*6 gaps = 196 DIPs -> width 204)
+    xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"6\" hitTest=\"client\" width=\"204\" minWidth=\"204\" padding=\"0,0,0,0\">";
+    xml += "<Label text=\"🎨 主题色:\" fontSize=\"11\" color=\"#64748B\" fontWeight=\"bold\" width=\"76\" minWidth=\"76\" height=\"16\" ellipsis=\"false\" />";
 
     struct ThemeDotInfo {
         ThemeColor id;
@@ -260,15 +260,15 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
     for (const auto& d : dots) {
         bool isActive = (state.theme == d.id);
         if (isActive) {
-            xml += "<Button text=\"✔\" fontSize=\"10\" width=\"18\" height=\"18\" cornerRadius=\"9\" background=\"" + std::string(d.colorHex) + "\" foreground=\"#FFFFFF\" lockColors=\"true\" hitTest=\"client\" onClick=\"" + std::string(d.action) + "\" />";
+            xml += "<Button text=\"✔\" fontSize=\"10\" width=\"18\" height=\"18\" minWidth=\"18\" minHeight=\"18\" maxWidth=\"18\" maxHeight=\"18\" cornerRadius=\"9\" background=\"" + std::string(d.colorHex) + "\" foreground=\"#FFFFFF\" lockColors=\"true\" hitTest=\"client\" onClick=\"" + std::string(d.action) + "\" />";
         } else {
-            xml += "<Button text=\"\" width=\"18\" height=\"18\" cornerRadius=\"9\" background=\"" + std::string(d.colorHex) + "\" foreground=\"#FFFFFF\" lockColors=\"true\" hitTest=\"client\" onClick=\"" + std::string(d.action) + "\" />";
+            xml += "<Button text=\"\" width=\"18\" height=\"18\" minWidth=\"18\" minHeight=\"18\" maxWidth=\"18\" maxHeight=\"18\" cornerRadius=\"9\" background=\"" + std::string(d.colorHex) + "\" foreground=\"#FFFFFF\" lockColors=\"true\" hitTest=\"client\" onClick=\"" + std::string(d.action) + "\" />";
         }
     }
     xml += "</Panel>"; // Theme Switcher
 
     // Window Caption Controls (34 + 2 + 34 + 2 + 38 = 110 DIPs)
-    xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"2\" hitTest=\"client\" width=\"112\">";
+    xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"2\" hitTest=\"client\" width=\"112\" minWidth=\"112\" padding=\"0,0,0,0\">";
     xml += "<Button variant=\"caption-minimize\" width=\"34\" height=\"30\" hitTest=\"client\" onClick=\"app:windowMinimize\" />";
     xml += "<Button variant=\"caption-maximize\" width=\"34\" height=\"30\" hitTest=\"client\" onClick=\"app:windowMaximize\" />";
     xml += "<Button variant=\"caption-close\" width=\"38\" height=\"30\" hitTest=\"client\" onClick=\"app:windowClose\" />";
