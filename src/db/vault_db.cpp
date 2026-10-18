@@ -34,13 +34,27 @@ VaultDb::~VaultDb() {
 }
 
 std::wstring VaultDb::ResolveDefaultDbPath() {
-    wchar_t appData[MAX_PATH] = {};
-    if (SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, 0, appData))) {
-        std::wstring dir = std::wstring(appData) + L"\\ai-pwd";
-        CreateDirectoryW(dir.c_str(), nullptr);
-        return dir + L"\\vault.db";
+    wchar_t exePath[MAX_PATH] = {};
+    GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+    wchar_t* lastSlash = wcsrchr(exePath, L'\\');
+    std::wstring exeDir = lastSlash ? std::wstring(exePath, lastSlash) : L".";
+    std::wstring dataDir = exeDir + L"\\data";
+    CreateDirectoryW(dataDir.c_str(), nullptr);
+
+    std::wstring newDbPath = dataDir + L"\\vault.db";
+
+    // Auto-migrate legacy database from %APPDATA%/ai-pwd/vault.db if new DB does not exist yet
+    if (GetFileAttributesW(newDbPath.c_str()) == INVALID_FILE_ATTRIBUTES) {
+        wchar_t appData[MAX_PATH] = {};
+        if (SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, 0, appData))) {
+            std::wstring legacyPath = std::wstring(appData) + L"\\ai-pwd\\vault.db";
+            if (GetFileAttributesW(legacyPath.c_str()) != INVALID_FILE_ATTRIBUTES) {
+                CopyFileW(legacyPath.c_str(), newDbPath.c_str(), FALSE);
+            }
+        }
     }
-    return L"vault.db";
+
+    return newDbPath;
 }
 
 bool VaultDb::Init(const std::wstring& dbPath) {

@@ -37,13 +37,14 @@ New-Item -ItemType Directory -Path $stageDir -Force | Out-Null
 # 3. Copy binaries and assets
 Write-Host "[2/4] Collecting application binaries and resources..." -ForegroundColor Yellow
 Copy-Item (Join-Path $rootDir "build\$Config\ai_pwd.exe") -Destination $stageDir
-Copy-Item (Join-Path $rootDir "build\$Config\resource") -Destination $stageDir -Recurse
+New-Item -ItemType Directory -Path (Join-Path $stageDir "data") -Force | Out-Null
 if (Test-Path (Join-Path $rootDir "README.md")) {
     Copy-Item (Join-Path $rootDir "README.md") -Destination $stageDir
 }
 if (Test-Path (Join-Path $rootDir "LICENSE")) {
     Copy-Item (Join-Path $rootDir "LICENSE") -Destination $stageDir
 }
+Copy-Item (Join-Path $rootDir "build\$Config\ai_pwd.exe") -Destination (Join-Path $distDir "ai_pwd.exe")
 
 # 4. Create Portable ZIP Archive
 Write-Host "[3/4] Creating ZIP distribution archive..." -ForegroundColor Yellow

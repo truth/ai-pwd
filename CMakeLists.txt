@@ -20,6 +20,14 @@ endif()
 # Match static CRT (/MT /MTd) with ai_win_ui_lib
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
+# Ensure src/assets.zip is generated from AI_WIN_UI_DIR/resource
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/assets.zip" AND EXISTS "${AI_WIN_UI_DIR}/resource")
+    message(STATUS "Packaging assets.zip from ${AI_WIN_UI_DIR}/resource...")
+    execute_process(
+        COMMAND powershell -Command "Compress-Archive -Path '${AI_WIN_UI_DIR}/resource/*' -DestinationPath '${CMAKE_CURRENT_SOURCE_DIR}/src/assets.zip' -Force"
+    )
+endif()
+
 set(SOURCES
     src/main.cpp
     src/db/vault_db.h
@@ -107,7 +115,6 @@ add_custom_command(TARGET ai_pwd POST_BUILD
 # Packaging / Distribution (CPack)
 # -------------------------------------------------------------
 install(TARGETS ai_pwd RUNTIME DESTINATION .)
-install(DIRECTORY "${AI_WIN_UI_DIR}/resource" DESTINATION .)
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/README.md" "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE"
     DESTINATION .
     OPTIONAL

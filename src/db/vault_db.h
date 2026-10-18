@@ -39,7 +39,7 @@ public:
     VaultDb();
     ~VaultDb();
 
-    // Initialize database. If dbPath is empty, automatically use %APPDATA%/ai-pwd/vault.db
+    // Initialize database. If dbPath is empty, automatically use <exeDir>/data/vault.db
     bool Init(const std::wstring& dbPath = L"");
 
     std::vector<VaultItem> QueryItems(const std::wstring& keyword = L"",

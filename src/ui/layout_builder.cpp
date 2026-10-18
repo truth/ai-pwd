@@ -262,7 +262,7 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
         if (isActive) {
             xml += "<Button text=\"✔\" fontSize=\"10\" width=\"18\" height=\"18\" cornerRadius=\"9\" background=\"" + std::string(d.colorHex) + "\" foreground=\"#FFFFFF\" lockColors=\"true\" hitTest=\"client\" onClick=\"" + std::string(d.action) + "\" />";
         } else {
-            xml += "<Button text=\"\" width=\"14\" height=\"14\" cornerRadius=\"7\" margin=\"2,2,2,2\" background=\"" + std::string(d.colorHex) + "\" foreground=\"#FFFFFF\" lockColors=\"true\" hitTest=\"client\" onClick=\"" + std::string(d.action) + "\" />";
+            xml += "<Button text=\"\" width=\"18\" height=\"18\" cornerRadius=\"9\" background=\"" + std::string(d.colorHex) + "\" foreground=\"#FFFFFF\" lockColors=\"true\" hitTest=\"client\" onClick=\"" + std::string(d.action) + "\" />";
         }
     }
     xml += "</Panel>"; // Theme Switcher
@@ -737,8 +737,11 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
 
         // Top Search & Filter Bar
         xml += "<Panel direction=\"row\" height=\"40\" spacing=\"10\" alignItems=\"center\">";
-        xml += "<TextInput name=\"vault_search\" fontSize=\"13\" height=\"36\" background=\"" + theme.cardBg + "\" textColor=\"#F8FAFC\" cornerRadius=\"6\" flexGrow=\"1\" />";
-        xml += "<Button text=\"搜索\" width=\"66\" height=\"36\" fontSize=\"12\" background=\"" + theme.btnSecondaryBg + "\" foreground=\"#E2E8F0\" cornerRadius=\"6\" lockColors=\"true\" onClick=\"vault:search\" />";
+        xml += "<Panel direction=\"row\" height=\"36\" background=\"" + theme.cardBg + "\" cornerRadius=\"6\" flexGrow=\"1\" alignItems=\"center\" padding=\"10,0,10,0\" spacing=\"6\">";
+        xml += "<Label text=\"🔍\" fontSize=\"12\" color=\"#64748B\" width=\"20\" height=\"18\" />";
+        xml += "<TextInput name=\"vault_search\" fontSize=\"13\" height=\"32\" background=\"transparent\" textColor=\"#F8FAFC\" flexGrow=\"1\" />";
+        xml += "</Panel>";
+        xml += "<Button text=\"搜索 (Enter)\" width=\"88\" height=\"36\" fontSize=\"12\" background=\"" + theme.btnSecondaryBg + "\" foreground=\"#E2E8F0\" cornerRadius=\"6\" lockColors=\"true\" onClick=\"vault:search\" />";
         if (!state.searchQuery.empty()) {
             xml += "<Button text=\"清除\" width=\"60\" height=\"36\" fontSize=\"12\" background=\"" + theme.btnSecondaryBg + "\" foreground=\"#94A3B8\" cornerRadius=\"6\" lockColors=\"true\" onClick=\"vault:reset_search\" />";
         }

@@ -206,6 +206,16 @@ LRESULT CALLBACK AppController::ShellWndProc(HWND hwnd, UINT msg, WPARAM wParam,
             break;
         }
 
+        case WM_SETFOCUS: {
+            if (app && app->m_host && !app->m_host->IsClosed()) {
+                HWND childHwnd = app->m_host->GetHwnd();
+                if (childHwnd) {
+                    SetFocus(childHwnd);
+                }
+            }
+            return 0;
+        }
+
         case WM_SIZE: {
             if (wParam == SIZE_MINIMIZED) {
                 return 0; // Do not resize child to 0x0 while shell is minimized
@@ -362,15 +372,27 @@ LRESULT CALLBACK AppController::ChildHostSubclassProc(HWND hwnd, UINT uMsg, WPAR
             break;
         }
 
+        case WM_MOUSEACTIVATE: {
+            SetFocus(hwnd);
+            return MA_ACTIVATE;
+        }
+
+        case WM_RBUTTONDOWN:
+        case WM_MBUTTONDOWN: {
+            SetFocus(hwnd);
+            break;
+        }
+
         case WM_LBUTTONDOWN: {
+            SetFocus(hwnd);
             int y = GET_Y_LPARAM(lParam);
             int x = GET_X_LPARAM(lParam);
             RECT rc{};
             GetClientRect(hwnd, &rc);
             // Title bar height is 46px.
-            // Right controls take the rightmost ~300px (theme switcher dots + caption buttons).
-            // Everything to the left of (rc.right - 300) initiates smooth native caption dragging on shellWnd!
-            if (y >= 0 && y < 46 && x < (rc.right - 300)) {
+            // Right controls take ~340px (theme switcher dots + caption buttons).
+            // Everything to the left of (rc.right - 340) initiates smooth native caption dragging on shellWnd!
+            if (y >= 0 && y < 46 && x < (rc.right - 340)) {
                 ReleaseCapture();
                 SendMessageW(shellWnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
                 return 0;
@@ -379,11 +401,12 @@ LRESULT CALLBACK AppController::ChildHostSubclassProc(HWND hwnd, UINT uMsg, WPAR
         }
 
         case WM_LBUTTONDBLCLK: {
+            SetFocus(hwnd);
             int y = GET_Y_LPARAM(lParam);
             int x = GET_X_LPARAM(lParam);
             RECT rc{};
             GetClientRect(hwnd, &rc);
-            if (y >= 0 && y < 46 && x < (rc.right - 300)) {
+            if (y >= 0 && y < 46 && x < (rc.right - 340)) {
                 if (shellWnd) {
                     ShowWindow(shellWnd, IsZoomed(shellWnd) ? SW_RESTORE : SW_MAXIMIZE);
                 }
@@ -432,6 +455,34 @@ void AppController::UpdateThemeDwmAttributes() {
 }
 
 bool AppController::Initialize(const std::wstring& cmdLine) {
+    // 0. Ensure assets.zip is present next to executable (extract from embedded RC if needed)
+    wchar_t exePath[MAX_PATH] = {};
+    GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+    wchar_t* lastSlash = wcsrchr(exePath, L'\\');
+    std::wstring exeDir = lastSlash ? std::wstring(exePath, lastSlash) : L".";
+    std::wstring zipPath = exeDir + L"\\assets.zip";
+    std::wstring resourceDir = exeDir + L"\\resource";
+
+    if (GetFileAttributesW(zipPath.c_str()) == INVALID_FILE_ATTRIBUTES &&
+        GetFileAttributesW(resourceDir.c_str()) == INVALID_FILE_ATTRIBUTES) {
+        HRSRC hRes = FindResourceW(m_instance, MAKEINTRESOURCEW(IDR_EMBEDDED_ASSETS), RT_RCDATA);
+        if (hRes) {
+            HGLOBAL hData = LoadResource(m_instance, hRes);
+            if (hData) {
+                DWORD size = SizeofResource(m_instance, hRes);
+                const void* ptr = LockResource(hData);
+                if (ptr && size > 0) {
+                    HANDLE hFile = CreateFileW(zipPath.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+                    if (hFile != INVALID_HANDLE_VALUE) {
+                        DWORD written = 0;
+                        WriteFile(hFile, ptr, size, &written, nullptr);
+                        CloseHandle(hFile);
+                    }
+                }
+            }
+        }
+    }
+
     // 1. Initialize SQLite Database
     if (!m_db.Init()) {
         MessageBoxW(nullptr, L"无法初始化 SQLite 数据库", L"错误", MB_ICONERROR);
@@ -525,8 +576,26 @@ bool AppController::Initialize(const std::wstring& cmdLine) {
 int AppController::Run() {
     MSG msg;
     while (GetMessageW(&msg, nullptr, 0, 0) > 0) {
-        if (m_host && !m_host->IsClosed() && m_host->ProcessMessage(msg)) {
-            continue;
+        if (m_host && !m_host->IsClosed()) {
+            HWND childHwnd = m_host->GetHwnd();
+            if (childHwnd) {
+                // If keyboard input arrives targeting the outer shell, forward to child host
+                if (msg.message >= WM_KEYFIRST && msg.message <= WM_KEYLAST) {
+                    if (msg.hwnd == m_shellWnd) {
+                        msg.hwnd = childHwnd;
+                    }
+                    // Enter key triggers search on Vault/Favorites tabs
+                    if (msg.message == WM_KEYDOWN && msg.wParam == VK_RETURN) {
+                        if ((m_state.activeTab == ActiveTab::Vault || m_state.activeTab == ActiveTab::Favorites) && !m_state.isEditing) {
+                            EnqueueAction("vault:search");
+                            continue;
+                        }
+                    }
+                }
+            }
+            if (m_host->ProcessMessage(msg)) {
+                continue;
+            }
         }
         TranslateMessage(&msg);
         DispatchMessageW(&msg);

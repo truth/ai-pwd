@@ -57,6 +57,9 @@ jobs:
         run: |
           cd ai-pwd
           $env:AI_WIN_UI_DIR = "$((Get-Item ..\ai-win-ui).FullName)"
+          if (-not (Test-Path "src\assets.zip") -and (Test-Path "$env:AI_WIN_UI_DIR\resource")) {
+            Compress-Archive -Path "$env:AI_WIN_UI_DIR\resource\*" -DestinationPath "src\assets.zip" -Force
+          }
           cmake -B build -G "Visual Studio 17 2022" -A x64 -DAI_WIN_UI_DIR="$env:AI_WIN_UI_DIR"
           cmake --build build --config Release
 
@@ -86,6 +89,7 @@ jobs:
           files: |
             ai-pwd/dist/*.zip
             ai-pwd/dist/*.sha256
+            ai-pwd/dist/ai_pwd.exe
           generate_release_notes: true
           draft: false
           prerelease: false

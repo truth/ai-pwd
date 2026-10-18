@@ -2,3 +2,6 @@
 
 // Set icon with lowest ID so Explorer uses it as the default file icon
 IDI_APP_ICON ICON "../resources/app_icon.ico"
+
+// Embedded assets.zip archive containing all UI themes, styles, icons, and layouts
+IDR_EMBEDDED_ASSETS RCDATA "assets.zip"
