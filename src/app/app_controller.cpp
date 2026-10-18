@@ -4,34 +4,41 @@
 #include <shellapi.h>
 #include <dwmapi.h>
 #include <commctrl.h>
+#include <windowsx.h>
 #include <algorithm>
 
 namespace pwd {
 
 namespace {
 
-constexpr wchar_t kAppClass[] = L"AiPwdAppClass";
+constexpr wchar_t kShellClass[] = L"AiPwdShellClass";
 constexpr UINT WM_APP_ACTION = WM_APP + 10;
 
-LRESULT CALLBACK HostSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
-    if (uMsg == WM_SIZE || uMsg == WM_WINDOWPOSCHANGED) {
-        if (IsZoomed(hwnd)) {
-            SetWindowRgn(hwnd, nullptr, TRUE);
-        } else {
-            RECT rc{};
-            if (GetWindowRect(hwnd, &rc)) {
-                int width = rc.right - rc.left;
-                int height = rc.bottom - rc.top;
-                if (width > 0 && height > 0) {
-                    HRGN rgn = CreateRoundRectRgn(0, 0, width + 1, height + 1, 16, 16);
-                    SetWindowRgn(hwnd, rgn, TRUE);
-                }
-            }
-        }
-    } else if (uMsg == WM_NCDESTROY) {
-        RemoveWindowSubclass(hwnd, HostSubclassProc, uIdSubclass);
+LRESULT HitTestResizeBorder(HWND hwnd, POINT screenPt) {
+    if (IsZoomed(hwnd)) {
+        return HTCLIENT;
     }
-    return DefSubclassProc(hwnd, uMsg, wParam, lParam);
+    RECT bounds{};
+    GetClientRect(hwnd, &bounds);
+    POINT pt = screenPt;
+    ScreenToClient(hwnd, &pt);
+
+    constexpr int border = 8;
+    const bool left = pt.x < bounds.left + border;
+    const bool right = pt.x >= bounds.right - border;
+    const bool top = pt.y < bounds.top + border;
+    const bool bottom = pt.y >= bounds.bottom - border;
+
+    if (top && left) return HTTOPLEFT;
+    if (top && right) return HTTOPRIGHT;
+    if (bottom && left) return HTBOTTOMLEFT;
+    if (bottom && right) return HTBOTTOMRIGHT;
+    if (left) return HTLEFT;
+    if (right) return HTRIGHT;
+    if (top) return HTTOP;
+    if (bottom) return HTBOTTOM;
+
+    return HTCLIENT;
 }
 
 } // namespace
@@ -39,9 +46,10 @@ LRESULT CALLBACK HostSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
 AppController::AppController(HINSTANCE instance) : m_instance(instance) {}
 
 AppController::~AppController() {
-    if (m_appWnd) {
-        DestroyWindow(m_appWnd);
-        m_appWnd = nullptr;
+    m_host.reset();
+    if (m_shellWnd) {
+        DestroyWindow(m_shellWnd);
+        m_shellWnd = nullptr;
     }
 }
 
@@ -53,12 +61,12 @@ void AppController::HostActionThunk(const char* actionId, void* user) {
 
 void AppController::EnqueueAction(const std::string& actionId) {
     m_pendingActions.push_back(actionId);
-    if (m_appWnd) {
-        PostMessageW(m_appWnd, WM_APP_ACTION, 0, 0);
+    if (m_shellWnd) {
+        PostMessageW(m_shellWnd, WM_APP_ACTION, 0, 0);
     }
 }
 
-LRESULT CALLBACK AppController::AppWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK AppController::ShellWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     if (msg == WM_NCCREATE) {
         auto* cs = reinterpret_cast<CREATESTRUCTW*>(lParam);
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(cs->lpCreateParams));
@@ -66,12 +74,179 @@ LRESULT CALLBACK AppController::AppWndProc(HWND hwnd, UINT msg, WPARAM wParam, L
     }
 
     auto* app = reinterpret_cast<AppController*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
-    if (msg == WM_APP_ACTION && app) {
-        app->DrainActions();
-        return 0;
+
+    switch (msg) {
+        case WM_NCCALCSIZE: {
+            if (wParam == TRUE) {
+                auto* params = reinterpret_cast<NCCALCSIZE_PARAMS*>(lParam);
+                if (params && IsZoomed(hwnd)) {
+                    HMONITOR monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+                    MONITORINFO info{};
+                    info.cbSize = sizeof(info);
+                    if (GetMonitorInfoW(monitor, &info)) {
+                        params->rgrc[0] = info.rcWork;
+                    }
+                }
+                return 0; // Entire window is client area, zero system non-client border
+            }
+            return 0;
+        }
+
+        case WM_NCPAINT:
+            return 0; // Suppress system frame painting
+
+        case WM_NCHITTEST: {
+            POINT screenPt{GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+            LRESULT hit = HitTestResizeBorder(hwnd, screenPt);
+            if (hit != HTCLIENT) {
+                return hit;
+            }
+            break;
+        }
+
+        case WM_GETMINMAXINFO: {
+            auto* info = reinterpret_cast<MINMAXINFO*>(lParam);
+            if (info) {
+                HMONITOR monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+                MONITORINFO mi{};
+                mi.cbSize = sizeof(mi);
+                if (GetMonitorInfoW(monitor, &mi)) {
+                    info->ptMaxPosition.x = std::abs(mi.rcWork.left - mi.rcMonitor.left);
+                    info->ptMaxPosition.y = std::abs(mi.rcWork.top - mi.rcMonitor.top);
+                    info->ptMaxSize.x = std::abs(mi.rcWork.right - mi.rcWork.left);
+                    info->ptMaxSize.y = std::abs(mi.rcWork.bottom - mi.rcWork.top);
+                }
+                info->ptMinTrackSize.x = 900;
+                info->ptMinTrackSize.y = 600;
+            }
+            return 0;
+        }
+
+        case WM_SIZE: {
+            RECT rc{};
+            if (GetClientRect(hwnd, &rc)) {
+                int width = rc.right - rc.left;
+                int height = rc.bottom - rc.top;
+                if (IsZoomed(hwnd)) {
+                    SetWindowRgn(hwnd, nullptr, TRUE);
+                } else if (width > 0 && height > 0) {
+                    HRGN rgn = CreateRoundRectRgn(0, 0, width + 1, height + 1, 16, 16);
+                    SetWindowRgn(hwnd, rgn, TRUE);
+                }
+            }
+            if (app && app->m_host && !app->m_host->IsClosed()) {
+                app->m_host->FitToParent();
+            }
+            return 0;
+        }
+
+        case WM_APP_ACTION: {
+            if (app) {
+                app->DrainActions();
+            }
+            return 0;
+        }
+
+        case WM_DESTROY: {
+            if (app) {
+                app->m_host.reset();
+            }
+            PostQuitMessage(0);
+            return 0;
+        }
+
+        default:
+            break;
     }
 
     return DefWindowProcW(hwnd, msg, wParam, lParam);
+}
+
+LRESULT CALLBACK AppController::ChildHostSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
+    auto* app = reinterpret_cast<AppController*>(dwRefData);
+    HWND shellWnd = app ? app->m_shellWnd : GetParent(hwnd);
+
+    switch (uMsg) {
+        case WM_NCHITTEST: {
+            if (shellWnd && !IsZoomed(shellWnd)) {
+                POINT screenPt{GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+                POINT clientPt = screenPt;
+                ScreenToClient(hwnd, &clientPt);
+                RECT rc{};
+                GetClientRect(hwnd, &rc);
+                constexpr int kGrip = 7;
+                // If near the boundaries, let parent Shell window handle resize
+                if (clientPt.x < kGrip || clientPt.x >= rc.right - kGrip ||
+                    clientPt.y < kGrip || clientPt.y >= rc.bottom - kGrip) {
+                    return HTTRANSPARENT;
+                }
+            }
+            break;
+        }
+
+        case WM_LBUTTONDOWN: {
+            int y = GET_Y_LPARAM(lParam);
+            int x = GET_X_LPARAM(lParam);
+            // Title bar height is 46px.
+            // On the right (x >= 620): theme switcher dots and caption buttons must receive direct clicks.
+            // Left region (x < 620): title, logo, and empty caption initiates smooth native caption dragging on shellWnd!
+            if (y >= 0 && y < 46 && x < 620) {
+                ReleaseCapture();
+                SendMessageW(shellWnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+                return 0;
+            }
+            break;
+        }
+
+        case WM_LBUTTONDBLCLK: {
+            int y = GET_Y_LPARAM(lParam);
+            int x = GET_X_LPARAM(lParam);
+            if (y >= 0 && y < 46 && x < 620) {
+                if (shellWnd) {
+                    ShowWindow(shellWnd, IsZoomed(shellWnd) ? SW_RESTORE : SW_MAXIMIZE);
+                }
+                return 0;
+            }
+            break;
+        }
+
+        case WM_NCDESTROY: {
+            RemoveWindowSubclass(hwnd, ChildHostSubclassProc, uIdSubclass);
+            break;
+        }
+
+        default:
+            break;
+    }
+
+    return DefSubclassProc(hwnd, uMsg, wParam, lParam);
+}
+
+void AppController::UpdateThemeDwmAttributes() {
+    if (!m_shellWnd) return;
+    ThemePalette curPalette = GetThemePalette(m_state.theme);
+
+    // 1. DWM Dark mode
+    BOOL useDarkMode = TRUE;
+    DwmSetWindowAttribute(m_shellWnd, 20 /* DWMWA_USE_IMMERSIVE_DARK_MODE */, &useDarkMode, sizeof(useDarkMode));
+    DwmSetWindowAttribute(m_shellWnd, 19, &useDarkMode, sizeof(useDarkMode));
+
+    // 2. Windows 11 DWM rounded corners preference (DWMWCP_ROUND = 2)
+    DWORD cornerPreference = 2;
+    DwmSetWindowAttribute(m_shellWnd, 33 /* DWMWA_WINDOW_CORNER_PREFERENCE */, &cornerPreference, sizeof(cornerPreference));
+
+    // 3. Theme-driven DWM border color (instant, 100% flicker-free)
+    COLORREF themeDwmBorder = static_cast<COLORREF>(curPalette.dwmBorderColor);
+    DwmSetWindowAttribute(m_shellWnd, 34 /* DWMWA_BORDER_COLOR */, &themeDwmBorder, sizeof(themeDwmBorder));
+
+    // 4. Update Shell window background brush
+    static HBRUSH s_shellBrush = nullptr;
+    HBRUSH newBrush = CreateSolidBrush(static_cast<COLORREF>(curPalette.classBgColor));
+    SetClassLongPtrW(m_shellWnd, GCLP_HBRBACKGROUND, reinterpret_cast<LONG_PTR>(newBrush));
+    if (s_shellBrush) {
+        DeleteObject(s_shellBrush);
+    }
+    s_shellBrush = newBrush;
 }
 
 bool AppController::Initialize(const std::wstring& cmdLine) {
@@ -81,23 +256,7 @@ bool AppController::Initialize(const std::wstring& cmdLine) {
         return false;
     }
 
-    // 2. Register hidden app controller window
-    WNDCLASSEXW wc{};
-    wc.cbSize = sizeof(wc);
-    wc.lpfnWndProc = &AppController::AppWndProc;
-    wc.hInstance = m_instance;
-    wc.lpszClassName = kAppClass;
-    if (!RegisterClassExW(&wc) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS) {
-        return false;
-    }
-
-    m_appWnd = CreateWindowExW(0, kAppClass, L"AiPwdController", WS_OVERLAPPED,
-                               0, 0, 0, 0, nullptr, nullptr, m_instance, this);
-    if (!m_appWnd) {
-        return false;
-    }
-
-    // 3. Restore persisted theme preference
+    // 2. Restore persisted theme preference
     std::string savedTheme = m_db.GetSetting("theme", "blue");
     if (savedTheme == "purple") m_state.theme = ThemeColor::Purple;
     else if (savedTheme == "cyan") m_state.theme = ThemeColor::Cyan;
@@ -105,7 +264,57 @@ bool AppController::Initialize(const std::wstring& cmdLine) {
     else if (savedTheme == "amber") m_state.theme = ThemeColor::Amber;
     else m_state.theme = ThemeColor::Blue;
 
-    // 4. Initial generator evaluation
+    // 3. Register Shell Window Class
+    ThemePalette initialPalette = GetThemePalette(m_state.theme);
+    WNDCLASSEXW wc{};
+    wc.cbSize = sizeof(wc);
+    wc.lpfnWndProc = &AppController::ShellWndProc;
+    wc.hInstance = m_instance;
+    wc.lpszClassName = kShellClass;
+    wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+    wc.hbrBackground = CreateSolidBrush(static_cast<COLORREF>(initialPalette.classBgColor));
+    wc.style = CS_DBLCLKS;
+    if (!RegisterClassExW(&wc) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS) {
+        return false;
+    }
+
+    // 4. Center on screen: default 1180x820
+    const int initialW = 1180;
+    const int initialH = 820;
+    int screenW = GetSystemMetrics(SM_CXSCREEN);
+    int screenH = GetSystemMetrics(SM_CYSCREEN);
+    int posX = (std::max)(40, (screenW - initialW) / 2);
+    int posY = (std::max)(40, (screenH - initialH) / 2);
+
+    m_shellWnd = CreateWindowExW(
+        WS_EX_APPWINDOW,
+        kShellClass,
+        L"AI 密码生成器与保险库 (AI-Pwd)",
+        WS_POPUP | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU | WS_CLIPCHILDREN,
+        posX, posY, initialW, initialH,
+        nullptr, nullptr, m_instance, this
+    );
+    if (!m_shellWnd) {
+        return false;
+    }
+
+    // 5. Initialize DWM shadow & attributes
+    MARGINS margins{0, 0, 1, 0};
+    DwmExtendFrameIntoClientArea(m_shellWnd, &margins);
+    UpdateThemeDwmAttributes();
+
+    // 6. Set 16px rounded window region
+    HRGN rgn = CreateRoundRectRgn(0, 0, initialW + 1, initialH + 1, 16, 16);
+    SetWindowRgn(m_shellWnd, rgn, TRUE);
+
+    // 7. Set App Icon
+    HICON hIcon = LoadIconW(m_instance, MAKEINTRESOURCEW(IDI_APP_ICON));
+    if (hIcon) {
+        SendMessageW(m_shellWnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        SendMessageW(m_shellWnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
+    }
+
+    // 8. Initial generator evaluation
     m_state.genOptions.length = 16;
     m_state.genOptions.mode = GeneratorMode::Balanced;
     m_state.currentAssessment = PasswordGenerator::Generate(m_state.genOptions);
@@ -120,7 +329,10 @@ bool AppController::Initialize(const std::wstring& cmdLine) {
         m_state.editingItem.password = m_state.currentAssessment.password;
     }
 
-    // 5. Create main Host UI
+    // 9. Show shell window and create child Host UI
+    ShowWindow(m_shellWnd, SW_SHOW);
+    UpdateWindow(m_shellWnd);
+
     RecreateHost();
     return true;
 }
@@ -134,7 +346,7 @@ int AppController::Run() {
         TranslateMessage(&msg);
         DispatchMessageW(&msg);
 
-        if (m_host && m_host->IsClosed()) {
+        if (!IsWindow(m_shellWnd)) {
             break;
         }
     }
@@ -155,91 +367,33 @@ void AppController::ShowToast(const std::wstring& msg, const std::string& color)
 }
 
 void AppController::RecreateHost() {
-    int x = 80, y = 80, w = 1180, h = 820;
-    bool hasPos = false;
-    if (m_host && !m_host->IsClosed()) {
-        if (HWND hwnd = m_host->GetHwnd()) {
-            RECT r{};
-            if (GetWindowRect(hwnd, &r)) {
-                x = r.left;
-                y = r.top;
-                w = (std::max)(1000L, r.right - r.left);
-                h = (std::max)(640L, r.bottom - r.top);
-                hasPos = true;
-            }
-        }
-    }
+    if (!m_shellWnd) return;
 
+    // 1. Immediately update DWM border & Shell background brush without destroying m_shellWnd
+    UpdateThemeDwmAttributes();
+
+    // 2. Query items and build layout
     auto items = m_db.QueryItems(m_state.searchQuery, m_state.selectedCategory, (m_state.activeTab == ActiveTab::Favorites));
     m_state.stats = m_db.GetStats();
 
     std::string xml = LayoutBuilder::BuildMainLayout(m_state, items);
 
-    const std::wstring sizeStr = std::to_wstring(w) + L"x" + std::to_wstring(h);
-    SetEnvironmentVariableW(L"AI_WIN_UI_CHROME", L"custom");
-    SetEnvironmentVariableW(L"AI_WIN_UI_SIZE", sizeStr.c_str());
-
     ai_win_ui::HostCreateInfo info{};
+    info.parent = m_shellWnd; // Embed as WS_CHILD in persistent shell window!
     info.inlineLayoutXml = xml.c_str();
-    info.chrome = L"custom";
     info.ownMessagePump = false;
     info.onAction = &AppController::HostActionThunk;
     info.actionUser = this;
-    info.showCommand = SW_HIDE;
-    info.size = sizeStr.c_str();
-    if (hasPos) {
-        info.hasPosition = true;
-        info.posX = x;
-        info.posY = y;
-    }
+    info.showCommand = SW_SHOW;
 
     auto newHost = ai_win_ui::Host::Create(m_instance, info);
     if (newHost) {
-        HWND newHwnd = newHost->GetHwnd();
-        if (newHwnd) {
-            // 1. Force DWM to treat window as Dark Mode to remove any white border
-            BOOL useDarkMode = TRUE;
-            DwmSetWindowAttribute(newHwnd, 20, &useDarkMode, sizeof(useDarkMode));
-            DwmSetWindowAttribute(newHwnd, 19, &useDarkMode, sizeof(useDarkMode));
-
-            // 2. Windows 11 DWM rounded corners preference (DWMWA_WINDOW_CORNER_PREFERENCE = 33, DWMWCP_ROUND = 2)
-            DWORD cornerPreference = 2; // DWMWCP_ROUND
-            DwmSetWindowAttribute(newHwnd, 33, &cornerPreference, sizeof(cornerPreference));
-
-            // 3. Theme-driven DWM native border color
-            ThemePalette curPalette = GetThemePalette(m_state.theme);
-            COLORREF themeDwmBorder = static_cast<COLORREF>(curPalette.dwmBorderColor);
-            DwmSetWindowAttribute(newHwnd, 34 /* DWMWA_BORDER_COLOR */, &themeDwmBorder, sizeof(themeDwmBorder));
-
-            // 4. Set window class background brush to match theme canvas so it never paints white or flickers
-            static HBRUSH s_lastBrush = nullptr;
-            HBRUSH newBrush = CreateSolidBrush(static_cast<COLORREF>(curPalette.classBgColor));
-            SetClassLongPtrW(newHwnd, GCLP_HBRBACKGROUND, reinterpret_cast<LONG_PTR>(newBrush));
-            if (s_lastBrush) {
-                DeleteObject(s_lastBrush);
-            }
-            s_lastBrush = newBrush;
-
-            SetWindowPos(newHwnd, nullptr, x, y, w, h, (hasPos ? 0 : SWP_NOMOVE) | SWP_NOZORDER);
-
-            // 5. Apply rounded corner window region (16px radius) and hook dynamic resize/maximize
-            if (!IsZoomed(newHwnd)) {
-                HRGN rgn = CreateRoundRectRgn(0, 0, w + 1, h + 1, 16, 16);
-                SetWindowRgn(newHwnd, rgn, TRUE);
-            }
-            SetWindowSubclass(newHwnd, HostSubclassProc, 1001, 0);
-
-            HICON hIcon = LoadIconW(m_instance, MAKEINTRESOURCEW(IDI_APP_ICON));
-            if (hIcon) {
-                SendMessageW(newHwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
-                SendMessageW(newHwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
-            }
+        HWND childHwnd = newHost->GetHwnd();
+        if (childHwnd) {
+            SetWindowSubclass(childHwnd, ChildHostSubclassProc, 1002, reinterpret_cast<DWORD_PTR>(this));
         }
+        newHost->FitToParent();
         m_host = std::move(newHost);
-        if (newHwnd) {
-            ShowWindow(newHwnd, SW_SHOW);
-            UpdateWindow(newHwnd);
-        }
         PopulateFormFields();
     }
 }
@@ -270,15 +424,14 @@ void AppController::HandleAction(const std::string& id) {
     // Window Chrome Actions
     // ---------------------------------------------------------
     if (id == "windowMinimize") {
-        if (m_host && m_host->GetHwnd()) {
-            ShowWindow(m_host->GetHwnd(), SW_MINIMIZE);
+        if (m_shellWnd) {
+            ShowWindow(m_shellWnd, SW_MINIMIZE);
         }
         return;
     }
     if (id == "windowMaximize") {
-        if (m_host && m_host->GetHwnd()) {
-            HWND hwnd = m_host->GetHwnd();
-            ShowWindow(hwnd, IsZoomed(hwnd) ? SW_RESTORE : SW_MAXIMIZE);
+        if (m_shellWnd) {
+            ShowWindow(m_shellWnd, IsZoomed(m_shellWnd) ? SW_RESTORE : SW_MAXIMIZE);
         }
         return;
     }
@@ -508,8 +661,7 @@ void AppController::HandleAction(const std::string& id) {
         return;
     }
     if (id == "gen:copy") {
-        HWND hwnd = m_host ? m_host->GetHwnd() : nullptr;
-        CopyTextToClipboard(hwnd, m_state.currentAssessment.password);
+        CopyTextToClipboard(m_shellWnd, m_state.currentAssessment.password);
         if (m_host) {
             m_host->SetElementText("app_status_badge", L"✔ 生成密码已复制到剪贴板！");
             m_host->SetElementForeground("app_status_badge", 0xFF10B981);
@@ -596,7 +748,7 @@ void AppController::HandleAction(const std::string& id) {
         int64_t itemId = std::stoll(id.substr(16));
         VaultItem it;
         if (m_db.GetById(itemId, it)) {
-            CopyTextToClipboard(m_host ? m_host->GetHwnd() : nullptr, it.username);
+            CopyTextToClipboard(m_shellWnd, it.username);
             if (m_host) {
                 std::wstring feedback = L"✔ 已复制账号: " + it.username;
                 m_host->SetElementText("app_status_badge", feedback.c_str());
@@ -609,7 +761,7 @@ void AppController::HandleAction(const std::string& id) {
         int64_t itemId = std::stoll(id.substr(15));
         VaultItem it;
         if (m_db.GetById(itemId, it)) {
-            CopyTextToClipboard(m_host ? m_host->GetHwnd() : nullptr, it.password);
+            CopyTextToClipboard(m_shellWnd, it.password);
             if (m_host) {
                 m_host->SetElementText("app_status_badge", L"✔ 密码已安全复制到剪贴板！");
                 m_host->SetElementForeground("app_status_badge", 0xFF10B981);
