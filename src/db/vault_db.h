@@ -53,6 +53,10 @@ public:
     bool ToggleFavorite(int64_t id);
     VaultStats GetStats();
 
+    // App settings KV store
+    std::string GetSetting(const std::string& key, const std::string& defaultVal = "");
+    bool SetSetting(const std::string& key, const std::string& val);
+
     const std::wstring& GetDbPath() const { return m_dbPath; }
 
 private:

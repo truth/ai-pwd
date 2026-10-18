@@ -72,6 +72,11 @@ bool VaultDb::Init(const std::wstring& dbPath) {
         );
         CREATE INDEX IF NOT EXISTS idx_cat ON accounts(category);
         CREATE INDEX IF NOT EXISTS idx_fav ON accounts(favorite);
+
+        CREATE TABLE IF NOT EXISTS app_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        );
     )";
 
     char* errMsg = nullptr;
@@ -389,6 +394,42 @@ VaultStats VaultDb::GetStats() {
     stats.lastSnapshot = timeBuf;
 
     return stats;
+}
+
+std::string VaultDb::GetSetting(const std::string& key, const std::string& defaultVal) {
+    if (!m_db) return defaultVal;
+    sqlite3_stmt* stmt = nullptr;
+    const char* sql = "SELECT value FROM app_settings WHERE key = ?;";
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return defaultVal;
+    }
+    sqlite3_bind_text(stmt, 1, key.c_str(), -1, SQLITE_TRANSIENT);
+
+    std::string result = defaultVal;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        const unsigned char* val = sqlite3_column_text(stmt, 0);
+        if (val) {
+            result = reinterpret_cast<const char*>(val);
+        }
+    }
+    sqlite3_finalize(stmt);
+    return result;
+}
+
+bool VaultDb::SetSetting(const std::string& key, const std::string& val) {
+    if (!m_db) return false;
+    sqlite3_stmt* stmt = nullptr;
+    const char* sql = "INSERT INTO app_settings (key, value) VALUES (?, ?) "
+                      "ON CONFLICT(key) DO UPDATE SET value = excluded.value;";
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+    sqlite3_bind_text(stmt, 1, key.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, val.c_str(), -1, SQLITE_TRANSIENT);
+
+    int rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    return rc == SQLITE_DONE;
 }
 
 } // namespace pwd

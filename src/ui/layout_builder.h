@@ -25,14 +25,37 @@ enum class ThemeColor {
 struct ThemePalette {
     ThemeColor id = ThemeColor::Blue;
     std::string name;
+
+    // Brand accents
     std::string primary;         // #2563EB
     std::string primaryHover;    // #1D4ED8
     std::string primaryGlow;     // #1E40AF
     std::string accent;          // #38BDF8
     std::string dotColor;        // #3B82F6
     std::string borderAccent;    // #2563EB
-    std::string badgeBg;         // #1E3A8A44
+    std::string badgeBg;         // #172554
     std::string textAccent;      // #60A5FA
+
+    // Surface / Background tokens
+    std::string windowBg;        // Root canvas background
+    std::string titleBarBg;      // Top custom caption bar background
+    std::string sidebarBg;       // Left navigation panel background
+    std::string footerBg;        // Bottom status bar background
+    std::string cardBg;          // Main workspace cards (generator card, vault card, edit card)
+    std::string cardBorder;      // Card border stroke
+    std::string inputBg;         // Inputs, display box, item sub-boxes
+    std::string inputBorder;     // Border for inputs
+    std::string innerCardBg;     // Inner container
+    std::string btnSecondaryBg;  // Secondary/action buttons
+    std::string btnSecondaryHover;
+    std::string pillActiveBg;    // Active toggle/pill
+    std::string pillInactiveBg;  // Inactive toggle/pill
+    std::string catSelectedBg;   // Selected category item background
+    std::string statusCardBg;    // SQLite monitor card background
+
+    // Windows Native DWM & GDI attributes
+    unsigned long dwmBorderColor = 0; // COLORREF
+    unsigned long classBgColor = 0;   // COLORREF
 };
 
 ThemePalette GetThemePalette(ThemeColor color);

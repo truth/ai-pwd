@@ -97,7 +97,15 @@ bool AppController::Initialize(const std::wstring& cmdLine) {
         return false;
     }
 
-    // 3. Initial generator evaluation
+    // 3. Restore persisted theme preference
+    std::string savedTheme = m_db.GetSetting("theme", "blue");
+    if (savedTheme == "purple") m_state.theme = ThemeColor::Purple;
+    else if (savedTheme == "cyan") m_state.theme = ThemeColor::Cyan;
+    else if (savedTheme == "emerald") m_state.theme = ThemeColor::Emerald;
+    else if (savedTheme == "amber") m_state.theme = ThemeColor::Amber;
+    else m_state.theme = ThemeColor::Blue;
+
+    // 4. Initial generator evaluation
     m_state.genOptions.length = 16;
     m_state.genOptions.mode = GeneratorMode::Balanced;
     m_state.currentAssessment = PasswordGenerator::Generate(m_state.genOptions);
@@ -112,7 +120,7 @@ bool AppController::Initialize(const std::wstring& cmdLine) {
         m_state.editingItem.password = m_state.currentAssessment.password;
     }
 
-    // 4. Create main Host UI
+    // 5. Create main Host UI
     RecreateHost();
     return true;
 }
@@ -198,13 +206,19 @@ void AppController::RecreateHost() {
             DWORD cornerPreference = 2; // DWMWCP_ROUND
             DwmSetWindowAttribute(newHwnd, 33, &cornerPreference, sizeof(cornerPreference));
 
-            // 3. Suppress/colorize DWM border to dark tone (#1E293B)
-            COLORREF darkBorder = RGB(30, 41, 59);
-            DwmSetWindowAttribute(newHwnd, 34 /* DWMWA_BORDER_COLOR */, &darkBorder, sizeof(darkBorder));
+            // 3. Theme-driven DWM native border color
+            ThemePalette curPalette = GetThemePalette(m_state.theme);
+            COLORREF themeDwmBorder = static_cast<COLORREF>(curPalette.dwmBorderColor);
+            DwmSetWindowAttribute(newHwnd, 34 /* DWMWA_BORDER_COLOR */, &themeDwmBorder, sizeof(themeDwmBorder));
 
-            // 4. Set window class background brush to dark so it never paints white
-            static HBRUSH s_darkBrush = CreateSolidBrush(RGB(11, 15, 23));
-            SetClassLongPtrW(newHwnd, GCLP_HBRBACKGROUND, reinterpret_cast<LONG_PTR>(s_darkBrush));
+            // 4. Set window class background brush to match theme canvas so it never paints white or flickers
+            static HBRUSH s_lastBrush = nullptr;
+            HBRUSH newBrush = CreateSolidBrush(static_cast<COLORREF>(curPalette.classBgColor));
+            SetClassLongPtrW(newHwnd, GCLP_HBRBACKGROUND, reinterpret_cast<LONG_PTR>(newBrush));
+            if (s_lastBrush) {
+                DeleteObject(s_lastBrush);
+            }
+            s_lastBrush = newBrush;
 
             SetWindowPos(newHwnd, nullptr, x, y, w, h, (hasPos ? 0 : SWP_NOMOVE) | SWP_NOZORDER);
 
@@ -278,26 +292,31 @@ void AppController::HandleAction(const std::string& id) {
     // ---------------------------------------------------------
     if (id == "theme:blue") {
         m_state.theme = ThemeColor::Blue;
+        m_db.SetSetting("theme", "blue");
         RecreateHost();
         return;
     }
     if (id == "theme:purple") {
         m_state.theme = ThemeColor::Purple;
+        m_db.SetSetting("theme", "purple");
         RecreateHost();
         return;
     }
     if (id == "theme:cyan") {
         m_state.theme = ThemeColor::Cyan;
+        m_db.SetSetting("theme", "cyan");
         RecreateHost();
         return;
     }
     if (id == "theme:emerald") {
         m_state.theme = ThemeColor::Emerald;
+        m_db.SetSetting("theme", "emerald");
         RecreateHost();
         return;
     }
     if (id == "theme:amber") {
         m_state.theme = ThemeColor::Amber;
+        m_db.SetSetting("theme", "amber");
         RecreateHost();
         return;
     }
