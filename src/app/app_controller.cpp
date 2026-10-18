@@ -41,6 +41,18 @@ LRESULT HitTestResizeBorder(HWND hwnd, POINT screenPt) {
     return HTCLIENT;
 }
 
+
+UINT GetWindowDpiHelper(HWND hwnd) {
+    using GetDpiForWindowFn = UINT(WINAPI*)(HWND);
+    if (HMODULE user32 = GetModuleHandleW(L"user32.dll")) {
+        auto fn = reinterpret_cast<GetDpiForWindowFn>(GetProcAddress(user32, "GetDpiForWindow"));
+        if (fn) {
+            return fn(hwnd);
+        }
+    }
+    return 96;
+}
+
 } // namespace
 
 AppController::AppController(HINSTANCE instance) : m_instance(instance) {}
@@ -389,10 +401,15 @@ LRESULT CALLBACK AppController::ChildHostSubclassProc(HWND hwnd, UINT uMsg, WPAR
             int x = GET_X_LPARAM(lParam);
             RECT rc{};
             GetClientRect(hwnd, &rc);
-            // Title bar height is 46px.
-            // Right controls take ~340px (theme switcher dots + caption buttons).
-            // Everything to the left of (rc.right - 340) initiates smooth native caption dragging on shellWnd!
-            if (y >= 0 && y < 46 && x < (rc.right - 340)) {
+
+            UINT dpi = GetWindowDpiHelper(hwnd);
+            float scale = (dpi > 0 ? dpi : 96) / 96.0f;
+            int titleBarHeight = static_cast<int>(46.0f * scale + 0.5f);
+            // Right controls: Theme Switcher (182 DIP) + gap (14 DIP) + Caption Buttons (112 DIP) + right margin (14 DIP) = 322 DIPs.
+            // Allow a small safety margin of 335 DIPs so all buttons are responsive.
+            int rightControlsWidth = static_cast<int>(335.0f * scale + 0.5f);
+
+            if (y >= 0 && y < titleBarHeight && x < (rc.right - rightControlsWidth)) {
                 ReleaseCapture();
                 SendMessageW(shellWnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
                 return 0;
@@ -406,7 +423,13 @@ LRESULT CALLBACK AppController::ChildHostSubclassProc(HWND hwnd, UINT uMsg, WPAR
             int x = GET_X_LPARAM(lParam);
             RECT rc{};
             GetClientRect(hwnd, &rc);
-            if (y >= 0 && y < 46 && x < (rc.right - 340)) {
+
+            UINT dpi = GetWindowDpiHelper(hwnd);
+            float scale = (dpi > 0 ? dpi : 96) / 96.0f;
+            int titleBarHeight = static_cast<int>(46.0f * scale + 0.5f);
+            int rightControlsWidth = static_cast<int>(335.0f * scale + 0.5f);
+
+            if (y >= 0 && y < titleBarHeight && x < (rc.right - rightControlsWidth)) {
                 if (shellWnd) {
                     ShowWindow(shellWnd, IsZoomed(shellWnd) ? SW_RESTORE : SW_MAXIMIZE);
                 }

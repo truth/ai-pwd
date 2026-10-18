@@ -227,21 +227,21 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
     xml += "<Panel width=\"26\" height=\"26\" background=\"" + theme.primary + "\" cornerRadius=\"6\" alignItems=\"center\" justifyContent=\"center\">";
     xml += "<Label text=\"AI\" fontSize=\"12\" color=\"#FFFFFF\" fontWeight=\"bold\" width=\"20\" align=\"center\" />";
     xml += "</Panel>";
-    xml += "<Label text=\"AI 密码生成器与保险库\" fontSize=\"13\" color=\"#F8FAFC\" fontWeight=\"bold\" width=\"280\" height=\"20\" ellipsis=\"true\" />";
-    xml += "<Label text=\"(AI-Pwd)\" fontSize=\"11\" color=\"#64748B\" width=\"80\" height=\"20\" ellipsis=\"true\" />";
+    xml += "<Label text=\"AI 密码生成器与保险库\" fontSize=\"13\" color=\"#F8FAFC\" fontWeight=\"bold\" width=\"180\" height=\"20\" ellipsis=\"true\" />";
+    xml += "<Label text=\"(AI-Pwd)\" fontSize=\"11\" color=\"#64748B\" width=\"60\" height=\"20\" ellipsis=\"true\" />";
     
     // SQLite AES-256-GCM Badge
-    xml += "<Panel height=\"26\" background=\"" + theme.badgeBg + "\" cornerRadius=\"13\" padding=\"12,0,12,0\" margin=\"0,0,0,4\" alignItems=\"center\" direction=\"row\" spacing=\"6\">";
+    xml += "<Panel height=\"26\" background=\"" + theme.badgeBg + "\" cornerRadius=\"13\" padding=\"10,0,10,0\" margin=\"0,0,0,0\" alignItems=\"center\" direction=\"row\" spacing=\"6\">";
     xml += "<Panel width=\"6\" height=\"6\" cornerRadius=\"3\" background=\"" + theme.accent + "\" />";
-    xml += "<Label name=\"app_status_badge\" text=\"SQLite 本地加密存储 (AES-256-GCM)\" fontSize=\"11\" color=\"" + theme.textAccent + "\" width=\"250\" height=\"16\" ellipsis=\"true\" />";
+    xml += "<Label name=\"app_status_badge\" text=\"SQLite 本地加密存储 (AES-256-GCM)\" fontSize=\"11\" color=\"" + theme.textAccent + "\" width=\"220\" height=\"16\" ellipsis=\"true\" />";
     xml += "</Panel>";
     xml += "</Panel>"; // Left
 
-    // Right: Theme Color Dots Switcher + Minimize / Maximize / Close Buttons
-    xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"14\" hitTest=\"client\">";
+    // Right: Theme Color Dots Switcher + Minimize / Maximize / Close Buttons (Fixed 310 DIPs)
+    xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"14\" hitTest=\"client\" width=\"310\">";
     
-    // Theme Switcher Component
-    xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"6\" hitTest=\"client\">";
+    // Theme Switcher Component (58 label + 6 + 5*18 dots + 4*6 gaps = 178 DIPs)
+    xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"6\" hitTest=\"client\" width=\"182\">";
     xml += "<Label text=\"🎨 主题色:\" fontSize=\"11\" color=\"#64748B\" fontWeight=\"bold\" width=\"58\" height=\"16\" ellipsis=\"true\" />";
 
     struct ThemeDotInfo {
@@ -267,8 +267,8 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
     }
     xml += "</Panel>"; // Theme Switcher
 
-    // Window Caption Controls
-    xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"2\" hitTest=\"client\" width=\"108\">";
+    // Window Caption Controls (34 + 2 + 34 + 2 + 38 = 110 DIPs)
+    xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"2\" hitTest=\"client\" width=\"112\">";
     xml += "<Button variant=\"caption-minimize\" width=\"34\" height=\"30\" hitTest=\"client\" onClick=\"app:windowMinimize\" />";
     xml += "<Button variant=\"caption-maximize\" width=\"34\" height=\"30\" hitTest=\"client\" onClick=\"app:windowMaximize\" />";
     xml += "<Button variant=\"caption-close\" width=\"38\" height=\"30\" hitTest=\"client\" onClick=\"app:windowClose\" />";
