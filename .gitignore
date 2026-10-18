@@ -2,6 +2,7 @@
 build/
 bin/
 out/
+dist/
 
 # Visual Studio & IDE files
 .vs/

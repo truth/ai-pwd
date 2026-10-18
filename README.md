@@ -43,9 +43,17 @@
 - **原生 UTF-16 支持**：全流程采用 SQLite3 原生 UTF-16 接口（`sqlite3_open16` / `sqlite3_bind_text16` / `sqlite3_column_text16`），彻底杜绝 Windows 控制台与多语言字符集乱码。
 - **存储监控指标**：实时统计当前收录凭据总数、弱密码风险提示条目数，一目了然。
 
-### 4. 🎨 现代暗黑 Fluent 视觉规范
-- **自定义沉浸式标题栏 (Custom Chrome)**：无缝融合深色标题栏与窗口控制按钮（最小化/最大化/关闭），支持标准无边框拖拽移动。
-- **高 DPI 原生感知**：支持 100%、125%、150% 等任意 Windows 显示缩放比，界面元素与文字渲染锐利平滑。
+### 4. 🎨 现代暗黑 Fluent 视觉与主题联动
+- **自定义沉浸式标题栏 (Custom Chrome)**：无缝融合深色标题栏与窗口控制按钮（最小化/最大化/关闭），支持标准无边框拖拽移动与双击最大化/还原。
+- **5 套主题色一键即时切换**：预设经典海蓝 (Blue)、极光紫 (Purple)、赛博青 (Cyan)、翡翠绿 (Emerald)、琥珀金 (Amber)。无感热更新，DWM 窗口边框与系统画刷实时同步。
+- **全行居中超长密码自适应显示**：采用对称占位设计，24 位、32 位、48 位乃至 64 位超长密码自适应缩放字阶，全行完美居中，永不截断或溢出。
+- **Windows 11 视觉适配**：原生支持 DWM 圆角与亚克力阴影，支持多显示器 Per-Monitor V2 高 DPI 自由拖拽缩放。
+
+### 5. 🔔 系统托盘通知与后台唤醒 (System Tray)
+- **常驻系统托盘**：启动时自动驻留 Windows 任务栏通知区，配备应用专属图标与状态提示。
+- **单击/双击即刻唤醒**：点击托盘图标一键在显示/最小化之间无缝切换。
+- **快捷上下文菜单**：右键托盘图标可呼出快捷面板（快速进入密码生成器、进入保险库、安全退出）。
+- **资源管理器自愈**：监听 `TaskbarCreated` 系统消息，Windows 资源管理器崩溃重启后自动恢复托盘图标。
 
 ---
 
@@ -53,25 +61,28 @@
 
 ```text
 ai-pwd/
-├── CMakeLists.txt              # CMake 构建配置（Release /MT 静态 CRT 链接）
+├── .github/workflows/         # GitHub Actions 自动化 CI/CD 与 Release 打包工作流
+├── scripts/
+│   └── package.ps1            # 绿色便携包一键打包脚本 (生成 ZIP 与 SHA256)
+├── CMakeLists.txt             # CMake 构建配置（Release /MT 静态 CRT 链接与 CPack）
 ├── third_party/
 │   └── sqlite3/               # SQLite 3.46 官方 Amalgamation 源码
 │       ├── sqlite3.c
 │       └── sqlite3.h
 └── src/
-    ├── main.cpp                # 应用程序入口 (wWinMain、DPI 感知配置)
+    ├── main.cpp               # 应用程序入口 (wWinMain、DPI 感知配置)
     ├── app/
-    │   ├── app_controller.h    # 核心事件总线、状态流转与窗口生命周期
+    │   ├── app_controller.h   # 核心事件总线、系统托盘、状态流转与窗口生命周期
     │   ├── app_controller.cpp
-    │   └── clipboard_helper.h  # Win32 原生剪贴板交互工具
+    │   └── clipboard_helper.h # Win32 原生剪贴板交互工具
     ├── db/
-    │   ├── vault_db.h          # SQLite 封装层 (CRUD、统计、初始化测试数据)
+    │   ├── vault_db.h         # SQLite 封装层 (CRUD、统计、初始化测试数据)
     │   └── vault_db.cpp
     ├── generator/
-    │   ├── pwd_generator.h     # 强随机数生成、Shannon 熵值计算与预设配置
+    │   ├── pwd_generator.h    # 强随机数生成、Shannon 熵值计算与预设配置
     │   └── pwd_generator.cpp
     └── ui/
-        ├── layout_builder.h    # 基于 ai-win-ui 规范的动态 XML 布局渲染器
+        ├── layout_builder.h   # 基于 ai-win-ui 规范的动态 XML 布局渲染器
         └── layout_builder.cpp
 ```
 
@@ -89,7 +100,7 @@ ai-pwd/
 - Windows 10 / 11 64-bit
 - Visual Studio 2022 (包含 C++ 桌面开发组件及 MSVC v143 编译器)
 - CMake 3.20 或更高版本
-- 本地已编译的 `ai-win-ui` 静态库（位于 `F:/AI-Projects/ai-win-ui`）
+- 本地已编译的 `ai-win-ui` 静态库（位于 `../ai-win-ui` 或 `F:/AI-Projects/ai-win-ui`）
 
 ### 2. CMake 编译命令
 在项目根目录下打开 PowerShell 执行：
@@ -102,16 +113,34 @@ cmake -B build -G "Visual Studio 17 2022" -A x64
 cmake --build build --config Release
 ```
 
-构建成功后，在 `build/Release/` 目录下将生成单文件可执行程序：
-- `build/Release/ai_pwd.exe` (体积约 7.8 MB，内置 SQLite 引擎与 Direct2D/Yoga 渲染管线)
+构建成功后，在 `build/Release/` 目录下将生成独立可执行程序与资源文件：
+- `build/Release/ai_pwd.exe` (体积约 8.1 MB，内置 SQLite 引擎与 Direct2D/Yoga 渲染管线)
+- `build/Release/resource/` (UI 布局与样式资源)
+
+---
+
+## 📦 一键打包与发布
+
+项目内置了自动化打包脚本，可直接生成适用于生产分发的绿色便携 ZIP 压缩包与校验码：
+
+```powershell
+# 执行一键打包脚本（自动构建 Release、收集依赖资源、压缩归档并生成 SHA256）
+.\scripts\package.ps1 -Version 1.0.0
+```
+
+打包完成后，产物位于 `dist/` 目录：
+- `dist/ai-pwd-v1.0.0-windows-x64.zip`（便携解压即用）
+- `dist/ai-pwd-v1.0.0-windows-x64.zip.sha256`（数字校验哈希）
+
+项目同时配置了 GitHub Actions 自动化工作流（`.github/workflows/release.yml`），每次推送 `v*` 标签时会自动构建并发布至 GitHub Releases。
 
 ---
 
 ## 🚀 运行应用
 
-直接双击运行 `build/Release/ai_pwd.exe` 即可启动。
+直接解压或双击运行 `ai_pwd.exe` 即可启动。
 
-支持以下可选命令行测试参数：
+支持以下可选命令行参数：
 ```powershell
 # 启动时直接进入密码保险库面板
 .\build\Release\ai_pwd.exe vault
@@ -126,3 +155,9 @@ cmake --build build --config Release
 
 - **数据库路径**：`%APPDATA%\ai-pwd\vault.db`
 - **迁移与备份**：只需复制该 `vault.db` 文件至新设备的相同路径，即可完成全部密码库的无缝迁移。
+
+---
+
+## 📄 开源许可证
+
+本项目基于 [MIT License](LICENSE) 开源发布。

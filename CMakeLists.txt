@@ -7,7 +7,15 @@ set(CMAKE_C_STANDARD 11)
 
 add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN UNICODE _UNICODE)
 
-set(AI_WIN_UI_DIR "F:/AI-Projects/ai-win-ui" CACHE PATH "Path to ai-win-ui repository")
+if(NOT AI_WIN_UI_DIR)
+    if(DEFINED ENV{AI_WIN_UI_DIR})
+        set(AI_WIN_UI_DIR "$ENV{AI_WIN_UI_DIR}" CACHE PATH "Path to ai-win-ui repository")
+    elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../ai-win-ui")
+        set(AI_WIN_UI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../ai-win-ui" CACHE PATH "Path to ai-win-ui repository")
+    else()
+        set(AI_WIN_UI_DIR "F:/AI-Projects/ai-win-ui" CACHE PATH "Path to ai-win-ui repository")
+    endif()
+endif()
 
 # Match static CRT (/MT /MTd) with ai_win_ui_lib
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
@@ -94,3 +102,21 @@ add_custom_command(TARGET ai_pwd POST_BUILD
         "$<TARGET_FILE_DIR:ai_pwd>/resource"
     COMMENT "Copying ai-win-ui resources"
 )
+
+# -------------------------------------------------------------
+# Packaging / Distribution (CPack)
+# -------------------------------------------------------------
+install(TARGETS ai_pwd RUNTIME DESTINATION .)
+install(DIRECTORY "${AI_WIN_UI_DIR}/resource" DESTINATION .)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/README.md" "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE"
+    DESTINATION .
+    OPTIONAL
+)
+
+set(CPACK_PACKAGE_NAME "ai-pwd")
+set(CPACK_PACKAGE_VENDOR "truth")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "AI 密码生成器与保险库 (AI-Pwd)")
+set(CPACK_PACKAGE_VERSION "1.0.0")
+set(CPACK_GENERATOR "ZIP")
+set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-v${CPACK_PACKAGE_VERSION}-windows-x64")
+include(CPack)

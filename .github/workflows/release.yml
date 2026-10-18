@@ -1,0 +1,91 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version string (e.g. 1.0.0)'
+        required: false
+        default: '1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-package:
+    name: Build & Package Windows x64
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout ai-pwd
+        uses: actions/checkout@v4
+        with:
+          path: ai-pwd
+
+      - name: Checkout ai-win-ui
+        uses: actions/checkout@v4
+        with:
+          repository: truth/ai-win-ui
+          path: ai-win-ui
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup MSVC developer environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Setup Yoga & Dependencies for ai-win-ui
+        shell: pwsh
+        run: |
+          cd ai-win-ui
+          if (Test-Path "scripts\setup_ci_deps.ps1") {
+            .\scripts\setup_ci_deps.ps1
+          }
+
+      - name: Build ai-win-ui Library (Release /MT)
+        shell: pwsh
+        run: |
+          cd ai-win-ui
+          cmake -B build -G "Visual Studio 17 2022" -A x64
+          cmake --build build --config Release
+
+      - name: Configure and Build AI-Pwd
+        shell: pwsh
+        run: |
+          cd ai-pwd
+          $env:AI_WIN_UI_DIR = "$((Get-Item ..\ai-win-ui).FullName)"
+          cmake -B build -G "Visual Studio 17 2022" -A x64 -DAI_WIN_UI_DIR="$env:AI_WIN_UI_DIR"
+          cmake --build build --config Release
+
+      - name: Package Distribution Archive
+        shell: pwsh
+        run: |
+          cd ai-pwd
+          $ver = "${{ github.ref_name }}"
+          if ($ver -like "v*") {
+            $ver = $ver.Substring(1)
+          } else {
+            $ver = "${{ github.event.inputs.version }}"
+            if (-not $ver) { $ver = "1.0.0" }
+          }
+          .\scripts\package.ps1 -Version $ver -Config Release
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-pwd-windows-x64
+          path: ai-pwd/dist/*
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ai-pwd/dist/*.zip
+            ai-pwd/dist/*.sha256
+          generate_release_notes: true
+          draft: false
+          prerelease: false
