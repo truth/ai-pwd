@@ -111,13 +111,25 @@ LRESULT CALLBACK AppController::ShellWndProc(HWND hwnd, UINT msg, WPARAM wParam,
                 MONITORINFO mi{};
                 mi.cbSize = sizeof(mi);
                 if (GetMonitorInfoW(monitor, &mi)) {
-                    info->ptMaxPosition.x = std::abs(mi.rcWork.left - mi.rcMonitor.left);
-                    info->ptMaxPosition.y = std::abs(mi.rcWork.top - mi.rcMonitor.top);
-                    info->ptMaxSize.x = std::abs(mi.rcWork.right - mi.rcWork.left);
-                    info->ptMaxSize.y = std::abs(mi.rcWork.bottom - mi.rcWork.top);
+                    info->ptMaxPosition.x = mi.rcWork.left - mi.rcMonitor.left;
+                    info->ptMaxPosition.y = mi.rcWork.top - mi.rcMonitor.top;
+                    info->ptMaxSize.x = mi.rcWork.right - mi.rcWork.left;
+                    info->ptMaxSize.y = mi.rcWork.bottom - mi.rcWork.top;
+                    info->ptMaxTrackSize.x = info->ptMaxSize.x;
+                    info->ptMaxTrackSize.y = info->ptMaxSize.y;
                 }
                 info->ptMinTrackSize.x = 900;
                 info->ptMinTrackSize.y = 600;
+            }
+            return 0;
+        }
+
+        case WM_DPICHANGED: {
+            auto* prc = reinterpret_cast<RECT*>(lParam);
+            if (prc) {
+                SetWindowPos(hwnd, nullptr, prc->left, prc->top,
+                             prc->right - prc->left, prc->bottom - prc->top,
+                             SWP_NOZORDER | SWP_NOACTIVATE);
             }
             return 0;
         }

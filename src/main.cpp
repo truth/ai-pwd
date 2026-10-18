@@ -2,8 +2,8 @@
 #include "app/app_controller.h"
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR pCmdLine, int cmdShow) {
-    // Enable DPI Awareness
-    SetProcessDPIAware();
+    // Enable modern Per-Monitor V2 DPI Awareness for crisp multi-monitor rendering
+    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
     // Ensure custom chrome and 1180x820 from process start to prevent resize animations
     SetEnvironmentVariableW(L"AI_WIN_UI_CHROME", L"custom");
