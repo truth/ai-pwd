@@ -46,11 +46,66 @@ LRESULT HitTestResizeBorder(HWND hwnd, POINT screenPt) {
 AppController::AppController(HINSTANCE instance) : m_instance(instance) {}
 
 AppController::~AppController() {
+    RemoveTrayIcon();
     m_host.reset();
     if (m_shellWnd) {
         DestroyWindow(m_shellWnd);
         m_shellWnd = nullptr;
     }
+}
+
+void AppController::InitTrayIcon() {
+    if (!m_shellWnd || m_trayAdded) return;
+
+    ZeroMemory(&m_nid, sizeof(m_nid));
+    m_nid.cbSize = sizeof(NOTIFYICONDATAW);
+    m_nid.hWnd = m_shellWnd;
+    m_nid.uID = 1;
+    m_nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
+    m_nid.uCallbackMessage = WM_TRAYICON;
+
+    HICON hIcon = LoadIconW(m_instance, MAKEINTRESOURCEW(IDI_APP_ICON));
+    if (!hIcon) {
+        hIcon = LoadIconW(nullptr, IDI_APPLICATION);
+    }
+    m_nid.hIcon = hIcon;
+    wcscpy_s(m_nid.szTip, L"AI 密码生成器与保险库 (AI-Pwd)");
+
+    if (Shell_NotifyIconW(NIM_ADD, &m_nid)) {
+        m_trayAdded = true;
+    }
+
+    if (!m_taskbarCreatedMsg) {
+        m_taskbarCreatedMsg = RegisterWindowMessageW(L"TaskbarCreated");
+    }
+}
+
+void AppController::RemoveTrayIcon() {
+    if (m_trayAdded) {
+        Shell_NotifyIconW(NIM_DELETE, &m_nid);
+        m_trayAdded = false;
+    }
+}
+
+void AppController::ShowTrayMenu() {
+    if (!m_shellWnd) return;
+
+    POINT pt;
+    GetCursorPos(&pt);
+    SetForegroundWindow(m_shellWnd);
+
+    HMENU hMenu = CreatePopupMenu();
+    if (!hMenu) return;
+
+    AppendMenuW(hMenu, MF_STRING, ID_TRAY_SHOW, L"⚡ 显示主界面");
+    AppendMenuW(hMenu, MF_STRING, ID_TRAY_GEN, L"⚡ 密码生成器");
+    AppendMenuW(hMenu, MF_STRING, ID_TRAY_VAULT, L"🛡 密码保险库");
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hMenu, MF_STRING, ID_TRAY_EXIT, L"❌ 退出程序");
+
+    TrackPopupMenu(hMenu, TPM_BOTTOMALIGN | TPM_RIGHTALIGN, pt.x, pt.y, 0, m_shellWnd, nullptr);
+    PostMessageW(m_shellWnd, WM_NULL, 0, 0);
+    DestroyMenu(hMenu);
 }
 
 void AppController::HostActionThunk(const char* actionId, void* user) {
@@ -192,6 +247,60 @@ LRESULT CALLBACK AppController::ShellWndProc(HWND hwnd, UINT msg, WPARAM wParam,
             return 0;
         }
 
+        case WM_TRAYICON: {
+            if (lParam == WM_LBUTTONUP || lParam == WM_LBUTTONDBLCLK) {
+                if (IsIconic(hwnd) || !IsWindowVisible(hwnd)) {
+                    ShowWindow(hwnd, SW_RESTORE);
+                    SetForegroundWindow(hwnd);
+                } else if (GetForegroundWindow() == hwnd && lParam == WM_LBUTTONUP) {
+                    ShowWindow(hwnd, SW_MINIMIZE);
+                } else {
+                    SetForegroundWindow(hwnd);
+                }
+            } else if (lParam == WM_RBUTTONUP || lParam == WM_CONTEXTMENU) {
+                if (app) {
+                    app->ShowTrayMenu();
+                }
+            }
+            return 0;
+        }
+
+        case WM_COMMAND: {
+            switch (LOWORD(wParam)) {
+                case ID_TRAY_SHOW:
+                    ShowWindow(hwnd, SW_RESTORE);
+                    SetForegroundWindow(hwnd);
+                    return 0;
+                case ID_TRAY_GEN:
+                    if (app) {
+                        app->m_state.activeTab = ActiveTab::Generator;
+                        app->m_state.isEditing = false;
+                        app->RecreateHost();
+                        ShowWindow(hwnd, SW_RESTORE);
+                        SetForegroundWindow(hwnd);
+                    }
+                    return 0;
+                case ID_TRAY_VAULT:
+                    if (app) {
+                        app->m_state.activeTab = ActiveTab::Vault;
+                        app->m_state.isEditing = false;
+                        app->RecreateHost();
+                        ShowWindow(hwnd, SW_RESTORE);
+                        SetForegroundWindow(hwnd);
+                    }
+                    return 0;
+                case ID_TRAY_EXIT:
+                    if (app) {
+                        app->RemoveTrayIcon();
+                    }
+                    DestroyWindow(hwnd);
+                    return 0;
+                default:
+                    break;
+            }
+            break;
+        }
+
         case WM_APP_ACTION: {
             if (app) {
                 app->DrainActions();
@@ -201,6 +310,7 @@ LRESULT CALLBACK AppController::ShellWndProc(HWND hwnd, UINT msg, WPARAM wParam,
 
         case WM_DESTROY: {
             if (app) {
+                app->RemoveTrayIcon();
                 app->m_host.reset();
             }
             PostQuitMessage(0);
@@ -208,6 +318,11 @@ LRESULT CALLBACK AppController::ShellWndProc(HWND hwnd, UINT msg, WPARAM wParam,
         }
 
         default:
+            if (app && app->m_taskbarCreatedMsg != 0 && msg == app->m_taskbarCreatedMsg) {
+                app->m_trayAdded = false;
+                app->InitTrayIcon();
+                return 0;
+            }
             break;
     }
 
@@ -380,6 +495,9 @@ bool AppController::Initialize(const std::wstring& cmdLine) {
         SendMessageW(m_shellWnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
         SendMessageW(m_shellWnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
     }
+
+    // 8. Initialize System Tray Icon
+    InitTrayIcon();
 
     // 8. Initial generator evaluation
     m_state.genOptions.length = 16;

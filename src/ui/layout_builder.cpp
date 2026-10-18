@@ -516,15 +516,36 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
         xml += "</Panel>";
         xml += "</Panel>";
 
-        // Big Password Text Box with Syntax Highlighting & Eye/Refresh buttons
-        xml += "<Panel direction=\"row\" height=\"52\" background=\"" + theme.inputBg + "\" cornerRadius=\"8\" padding=\"14,0,14,0\" alignItems=\"center\" justifyContent=\"spaceBetween\">";
+        // ---------------------------------------------------------
+        // Big Password Text Box with Full-Row Centered Display & Eye/Refresh buttons
+        // ---------------------------------------------------------
+        size_t pwdLen = state.currentAssessment.password.size();
+        int pwdFontSize = 22;
+        if (pwdLen > 48) {
+            pwdFontSize = 13;
+        } else if (pwdLen > 36) {
+            pwdFontSize = 15;
+        } else if (pwdLen > 24) {
+            pwdFontSize = 17;
+        } else if (pwdLen > 18) {
+            pwdFontSize = 19;
+        } else {
+            pwdFontSize = 22;
+        }
+
+        xml += "<Panel direction=\"row\" height=\"56\" background=\"" + theme.inputBg + "\" cornerRadius=\"10\" padding=\"0,14,0,14\" alignItems=\"center\" justifyContent=\"spaceBetween\">";
         
+        // Balanced left spacer matching right button panel (74px) for 100% mathematical row center
+        xml += "<Panel width=\"74\" height=\"32\" />";
+
+        // Center Panel: Full row centered password display without clipping or truncation
+        xml += "<Panel flexGrow=\"1\" direction=\"row\" alignItems=\"center\" justifyContent=\"center\">";
         if (!state.generatorRevealed) {
             std::string masked(state.currentAssessment.password.empty() ? 16 : state.currentAssessment.password.size(), '*');
-            xml += "<Label text=\"" + masked + "\" fontSize=\"22\" color=\"#64748B\" fontWeight=\"bold\" width=\"460\" ellipsis=\"true\" />";
+            xml += "<Label text=\"" + masked + "\" fontSize=\"" + std::to_string(pwdFontSize) + "\" color=\"#64748B\" fontWeight=\"bold\" align=\"center\" />";
         } else {
-            // Multi-color character syntax highlighting
-            xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"1\" flexWrap=\"wrap\" width=\"500\">";
+            // Multi-color character syntax highlighting, centered
+            xml += "<Panel direction=\"row\" alignItems=\"center\" justifyContent=\"center\" spacing=\"1\">";
             for (wchar_t ch : state.currentAssessment.password) {
                 std::string col = "#FFFFFF"; // lowercase
                 if (ch >= L'0' && ch <= L'9') {
@@ -544,16 +565,17 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
                 else if (ch == L'\'') s = "&apos;";
                 else s = WideToUtf8(std::wstring(1, ch));
 
-                xml += "<Label text=\"" + s + "\" fontSize=\"22\" color=\"" + col + "\" fontWeight=\"bold\" ellipsis=\"true\" />";
+                xml += "<Label text=\"" + s + "\" fontSize=\"" + std::to_string(pwdFontSize) + "\" color=\"" + col + "\" fontWeight=\"bold\" />";
             }
             xml += "</Panel>";
         }
+        xml += "</Panel>"; // Center Panel
 
-        // Action toggles inside display box: Eye & Refresh
-        xml += "<Panel direction=\"row\" spacing=\"6\" alignItems=\"center\">";
+        // Action toggles inside display box: Eye & Refresh (width 74px)
+        xml += "<Panel direction=\"row\" width=\"74\" spacing=\"6\" alignItems=\"center\" justifyContent=\"flexEnd\">";
         std::string eyeText = state.generatorRevealed ? "👁" : "👁‍🗨";
-        xml += "<Button text=\"" + eyeText + "\" width=\"32\" height=\"30\" fontSize=\"13\" background=\"" + theme.btnSecondaryBg + "\" foreground=\"#94A3B8\" cornerRadius=\"6\" lockColors=\"true\" onClick=\"gen:toggle_eye\" />";
-        xml += "<Button text=\"⟳\" width=\"32\" height=\"30\" fontSize=\"15\" background=\"" + theme.btnSecondaryBg + "\" foreground=\"#94A3B8\" cornerRadius=\"6\" lockColors=\"true\" onClick=\"gen:refresh\" />";
+        xml += "<Button text=\"" + eyeText + "\" width=\"34\" height=\"32\" fontSize=\"13\" background=\"" + theme.btnSecondaryBg + "\" foreground=\"#94A3B8\" cornerRadius=\"6\" lockColors=\"true\" onClick=\"gen:toggle_eye\" />";
+        xml += "<Button text=\"⟳\" width=\"34\" height=\"32\" fontSize=\"15\" background=\"" + theme.btnSecondaryBg + "\" foreground=\"#94A3B8\" cornerRadius=\"6\" lockColors=\"true\" onClick=\"gen:refresh\" />";
         xml += "</Panel>";
         xml += "</Panel>"; // Big Password Box
 
