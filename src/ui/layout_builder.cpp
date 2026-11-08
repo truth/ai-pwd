@@ -269,7 +269,7 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
     std::string xml;
     xml.reserve(32768);
 
-    std::string rootPadding = state.isMaximized ? "0,0,0,0" : "18,18,18,18";
+    std::string rootPadding = state.isMaximized ? "0,0,0,0" : "6,6,6,6";
     std::string cardCorner = state.isMaximized ? "0" : "16";
     std::string titleCorner = state.isMaximized ? "0" : "16,16,0,0";
     std::string footerCorner = state.isMaximized ? "0" : "0,0,16,16";

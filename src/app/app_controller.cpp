@@ -240,9 +240,9 @@ bool AppController::Initialize(const std::wstring& cmdLine) {
         m_state.editingItem.password = m_state.currentAssessment.password;
     }
 
-    // 4. Center on screen: default 1220x860 (card 1184x824 + 18px padding for soft shadow)
-    const int initialW = 1220;
-    const int initialH = 860;
+    // 4. Center on screen: default 1196x836 (card 1184x824 + 6px padding for subtle shadow)
+    const int initialW = 1196;
+    const int initialH = 836;
     int screenW = GetSystemMetrics(SM_CXSCREEN);
     int screenH = GetSystemMetrics(SM_CYSCREEN);
     int posX = (std::max)(40, (screenW - initialW) / 2);
@@ -254,7 +254,7 @@ bool AppController::Initialize(const std::wstring& cmdLine) {
     ai_win_ui::HostCreateInfo info{};
     info.chrome = L"layered";
     info.renderer = ai_win_ui::Backend::Skia;
-    info.size = L"1220x860";
+    info.size = L"1196x836";
     info.inlineLayoutXml = xml.c_str();
     info.ownMessagePump = false;
     info.hasPosition = true;
