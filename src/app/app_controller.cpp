@@ -657,16 +657,8 @@ void AppController::RecreateHost() {
     info.actionUser = this;
     info.showCommand = SW_SHOW;
 
-    // Check if user or environment specifically requests Skia backend
-    char* envRenderer = nullptr;
-    size_t envLen = 0;
-    _dupenv_s(&envRenderer, &envLen, "AI_WIN_UI_RENDERER");
-    if (envRenderer && _stricmp(envRenderer, "skia") == 0) {
-        info.renderer = ai_win_ui::Backend::Skia;
-    } else {
-        info.renderer = ai_win_ui::Backend::Direct2D;
-    }
-    if (envRenderer) free(envRenderer);
+    // 圆角模式：强制使用 Skia 渲染后端（Skia 具有全流程高精度次像素抗锯齿圆角渲染管线）
+    info.renderer = ai_win_ui::Backend::Skia;
 
     auto newHost = ai_win_ui::Host::Create(m_instance, info);
     if (newHost) {
