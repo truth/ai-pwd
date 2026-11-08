@@ -228,20 +228,12 @@ LRESULT CALLBACK AppController::ShellWndProc(HWND hwnd, UINT msg, WPARAM wParam,
             return 0;
         }
 
+        case WM_ERASEBKGND:
+            return 1; // Intercept GDI erase to eliminate resizing flicker
+
         case WM_SIZE: {
             if (wParam == SIZE_MINIMIZED) {
                 return 0; // Do not resize child to 0x0 while shell is minimized
-            }
-            RECT rc{};
-            if (GetClientRect(hwnd, &rc)) {
-                int width = rc.right - rc.left;
-                int height = rc.bottom - rc.top;
-                if (IsZoomed(hwnd)) {
-                    SetWindowRgn(hwnd, nullptr, TRUE);
-                } else if (width > 0 && height > 0) {
-                    HRGN rgn = CreateRoundRectRgn(0, 0, width + 1, height + 1, 16, 16);
-                    SetWindowRgn(hwnd, rgn, TRUE);
-                }
             }
             if (app && app->m_host && !app->m_host->IsClosed()) {
                 HWND childHwnd = app->m_host->GetHwnd();
@@ -262,9 +254,6 @@ LRESULT CALLBACK AppController::ShellWndProc(HWND hwnd, UINT msg, WPARAM wParam,
                     }
                 }
                 app->m_host->FitToParent();
-                if (childHwnd) {
-                    InvalidateRect(childHwnd, nullptr, TRUE);
-                }
             }
             return 0;
         }
@@ -367,6 +356,9 @@ LRESULT CALLBACK AppController::ChildHostSubclassProc(HWND hwnd, UINT uMsg, WPAR
             break;
         }
 
+        case WM_ERASEBKGND:
+            return 1; // Intercept GDI erase on child host
+
         case WM_NCHITTEST: {
             if (shellWnd && !IsZoomed(shellWnd)) {
                 POINT screenPt{GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
@@ -374,7 +366,7 @@ LRESULT CALLBACK AppController::ChildHostSubclassProc(HWND hwnd, UINT uMsg, WPAR
                 ScreenToClient(hwnd, &clientPt);
                 RECT rc{};
                 GetClientRect(hwnd, &rc);
-                constexpr int kGrip = 7;
+                constexpr int kGrip = 8;
                 // If near the boundaries, let parent Shell window handle resize
                 if (clientPt.x < kGrip || clientPt.x >= rc.right - kGrip ||
                     clientPt.y < kGrip || clientPt.y >= rc.bottom - kGrip) {
@@ -561,15 +553,11 @@ bool AppController::Initialize(const std::wstring& cmdLine) {
     }
 
     // 5. Initialize DWM shadow & attributes
-    MARGINS margins{0, 0, 1, 0};
+    MARGINS margins{1, 1, 1, 1};
     DwmExtendFrameIntoClientArea(m_shellWnd, &margins);
     UpdateThemeDwmAttributes();
 
-    // 6. Set 16px rounded window region
-    HRGN rgn = CreateRoundRectRgn(0, 0, initialW + 1, initialH + 1, 16, 16);
-    SetWindowRgn(m_shellWnd, rgn, TRUE);
-
-    // 7. Set App Icon
+    // 6. Set App Icon
     HICON hIcon = LoadIconW(m_instance, MAKEINTRESOURCEW(IDI_APP_ICON));
     if (hIcon) {
         SendMessageW(m_shellWnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
@@ -668,6 +656,17 @@ void AppController::RecreateHost() {
     info.onAction = &AppController::HostActionThunk;
     info.actionUser = this;
     info.showCommand = SW_SHOW;
+
+    // Check if user or environment specifically requests Skia backend
+    char* envRenderer = nullptr;
+    size_t envLen = 0;
+    _dupenv_s(&envRenderer, &envLen, "AI_WIN_UI_RENDERER");
+    if (envRenderer && _stricmp(envRenderer, "skia") == 0) {
+        info.renderer = ai_win_ui::Backend::Skia;
+    } else {
+        info.renderer = ai_win_ui::Backend::Direct2D;
+    }
+    if (envRenderer) free(envRenderer);
 
     auto newHost = ai_win_ui::Host::Create(m_instance, info);
     if (newHost) {
