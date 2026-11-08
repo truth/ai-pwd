@@ -405,9 +405,9 @@ LRESULT CALLBACK AppController::ChildHostSubclassProc(HWND hwnd, UINT uMsg, WPAR
             UINT dpi = GetWindowDpiHelper(hwnd);
             float scale = (dpi > 0 ? dpi : 96) / 96.0f;
             int titleBarHeight = static_cast<int>(46.0f * scale + 0.5f);
-            // Right controls: Theme Switcher (204 DIP) + gap (14 DIP) + Caption Buttons (112 DIP) + right margin (14 DIP) = 344 DIPs.
-            // Allow a small safety margin of 355 DIPs so all theme dots and caption buttons are fully clickable.
-            int rightControlsWidth = static_cast<int>(355.0f * scale + 0.5f);
+            // Right controls: Theme Switcher (238 DIP) + gap (14 DIP) + Caption Buttons (112 DIP) + right margin (14 DIP) = 378 DIPs.
+            // Allow safety margin of 380 DIPs so all 6 theme dots and caption buttons are fully clickable.
+            int rightControlsWidth = static_cast<int>(380.0f * scale + 0.5f);
 
             if (y >= 0 && y < titleBarHeight && x < (rc.right - rightControlsWidth)) {
                 ReleaseCapture();
@@ -427,7 +427,7 @@ LRESULT CALLBACK AppController::ChildHostSubclassProc(HWND hwnd, UINT uMsg, WPAR
             UINT dpi = GetWindowDpiHelper(hwnd);
             float scale = (dpi > 0 ? dpi : 96) / 96.0f;
             int titleBarHeight = static_cast<int>(46.0f * scale + 0.5f);
-            int rightControlsWidth = static_cast<int>(335.0f * scale + 0.5f);
+            int rightControlsWidth = static_cast<int>(380.0f * scale + 0.5f);
 
             if (y >= 0 && y < titleBarHeight && x < (rc.right - rightControlsWidth)) {
                 if (shellWnd) {
@@ -455,7 +455,7 @@ void AppController::UpdateThemeDwmAttributes() {
     ThemePalette curPalette = GetThemePalette(m_state.theme);
 
     // 1. DWM Dark mode
-    BOOL useDarkMode = TRUE;
+    BOOL useDarkMode = (m_state.theme != ThemeColor::Light);
     DwmSetWindowAttribute(m_shellWnd, 20 /* DWMWA_USE_IMMERSIVE_DARK_MODE */, &useDarkMode, sizeof(useDarkMode));
     DwmSetWindowAttribute(m_shellWnd, 19, &useDarkMode, sizeof(useDarkMode));
 
@@ -518,7 +518,13 @@ bool AppController::Initialize(const std::wstring& cmdLine) {
     else if (savedTheme == "cyan") m_state.theme = ThemeColor::Cyan;
     else if (savedTheme == "emerald") m_state.theme = ThemeColor::Emerald;
     else if (savedTheme == "amber") m_state.theme = ThemeColor::Amber;
+    else if (savedTheme == "light") m_state.theme = ThemeColor::Light;
     else m_state.theme = ThemeColor::Blue;
+
+    // Restore persisted vault view mode (card or list)
+    std::string savedView = m_db.GetSetting("vault_view_mode", "card");
+    if (savedView == "list") m_state.viewMode = VaultViewMode::List;
+    else m_state.viewMode = VaultViewMode::Card;
 
     // 3. Register Shell Window Class
     ThemePalette initialPalette = GetThemePalette(m_state.theme);
@@ -754,6 +760,12 @@ void AppController::HandleAction(const std::string& id) {
         RecreateHost();
         return;
     }
+    if (id == "theme:light") {
+        m_state.theme = ThemeColor::Light;
+        m_db.SetSetting("theme", "light");
+        RecreateHost();
+        return;
+    }
 
     // ---------------------------------------------------------
     // Toast Dismiss
@@ -956,6 +968,22 @@ void AppController::HandleAction(const std::string& id) {
         m_state.editingItem = VaultItem{};
         m_state.editingItem.password = m_state.currentAssessment.password;
         m_state.editingItem.category = (m_state.selectedCategory == L"全部") ? L"其它" : m_state.selectedCategory;
+        RecreateHost();
+        return;
+    }
+
+    // ---------------------------------------------------------
+    // Vault: View Mode (Card / List)
+    // ---------------------------------------------------------
+    if (id == "vault:view_card") {
+        m_state.viewMode = VaultViewMode::Card;
+        m_db.SetSetting("vault_view_mode", "card");
+        RecreateHost();
+        return;
+    }
+    if (id == "vault:view_list") {
+        m_state.viewMode = VaultViewMode::List;
+        m_db.SetSetting("vault_view_mode", "list");
         RecreateHost();
         return;
     }

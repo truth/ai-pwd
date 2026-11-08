@@ -21,6 +21,11 @@ struct VaultItem {
     int64_t updatedAt = 0;
 };
 
+struct TagStat {
+    std::wstring name;
+    int count = 0;
+};
+
 struct VaultStats {
     int totalCount = 0;
     int favCount = 0;
@@ -30,6 +35,7 @@ struct VaultStats {
     int financeCount = 0;
     int emailCount = 0;
     int otherCount = 0;
+    std::vector<TagStat> tags; // 动态提取的所有标签及其计数
     std::string dbSizeStr = "4.82 MB";
     std::string lastSnapshot = "14:26:08";
 };
@@ -70,5 +76,8 @@ private:
 // UTF conversion utilities
 std::string WideToUtf8(const std::wstring& w);
 std::wstring Utf8ToWide(const std::string& s);
+
+// Tag splitting utility
+std::vector<std::wstring> SplitTags(const std::wstring& categoryStr);
 
 } // namespace pwd

@@ -3,6 +3,8 @@
 #include <shlobj.h>
 #include <ctime>
 #include <algorithm>
+#include <map>
+#include <cwctype>
 
 namespace pwd {
 
@@ -22,6 +24,38 @@ std::wstring Utf8ToWide(const std::string& s) {
     std::wstring out(size, L'\0');
     MultiByteToWideChar(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), out.data(), size);
     return out;
+}
+
+std::vector<std::wstring> SplitTags(const std::wstring& categoryStr) {
+    std::vector<std::wstring> tags;
+    std::wstring cur;
+    auto isDelim = [](wchar_t ch) {
+        return ch == L',' || ch == L'，' || ch == L';' || ch == L'；' ||
+               ch == L'/' || ch == L'\\' || ch == L'、' || ch == L'|' ||
+               ch == L' ' || ch == L'\t';
+    };
+    for (wchar_t ch : categoryStr) {
+        if (isDelim(ch)) {
+            while (!cur.empty() && iswspace(cur.front())) cur.erase(cur.begin());
+            while (!cur.empty() && iswspace(cur.back())) cur.pop_back();
+            if (!cur.empty()) {
+                if (std::find(tags.begin(), tags.end(), cur) == tags.end()) {
+                    tags.push_back(cur);
+                }
+                cur.clear();
+            }
+        } else {
+            cur += ch;
+        }
+    }
+    while (!cur.empty() && iswspace(cur.front())) cur.erase(cur.begin());
+    while (!cur.empty() && iswspace(cur.back())) cur.pop_back();
+    if (!cur.empty()) {
+        if (std::find(tags.begin(), tags.end(), cur) == tags.end()) {
+            tags.push_back(cur);
+        }
+    }
+    return tags;
 }
 
 VaultDb::VaultDb() = default;
@@ -181,7 +215,7 @@ std::vector<VaultItem> VaultDb::QueryItems(const std::wstring& keyword,
         sql += "AND favorite = 1 ";
     }
     if (!category.empty() && category != L"全部") {
-        sql += "AND category = ? ";
+        sql += "AND (category = ? OR category LIKE ?) ";
     }
     if (!keyword.empty()) {
         sql += "AND (title LIKE ? OR username LIKE ? OR url LIKE ? OR notes LIKE ?) ";
@@ -193,8 +227,11 @@ std::vector<VaultItem> VaultDb::QueryItems(const std::wstring& keyword,
     if (rc != SQLITE_OK) return list;
 
     int bindIdx = 1;
+    std::wstring catPattern;
     if (!category.empty() && category != L"全部") {
         sqlite3_bind_text16(stmt, bindIdx++, category.c_str(), -1, SQLITE_TRANSIENT);
+        catPattern = L"%" + category + L"%";
+        sqlite3_bind_text16(stmt, bindIdx++, catPattern.c_str(), -1, SQLITE_TRANSIENT);
     }
     std::wstring kwPattern;
     if (!keyword.empty()) {
@@ -223,6 +260,25 @@ std::vector<VaultItem> VaultDb::QueryItems(const std::wstring& keyword,
         item.favorite = (sqlite3_column_int(stmt, 7) != 0);
         item.createdAt = sqlite3_column_int64(stmt, 8);
         item.updatedAt = sqlite3_column_int64(stmt, 9);
+
+        // 如果按分类/标签筛选，精准校验标签匹配（支持单标签或多标签匹配）
+        if (!category.empty() && category != L"全部") {
+            auto tags = SplitTags(item.category);
+            bool matched = false;
+            for (const auto& t : tags) {
+                if (t == category) {
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched && item.category == category) {
+                matched = true;
+            }
+            if (!matched) {
+                continue;
+            }
+        }
+
         list.push_back(item);
     }
 
@@ -364,22 +420,42 @@ VaultStats VaultDb::GetStats() {
         sqlite3_finalize(stmt);
     }
 
-    // Category breakdown counts
-    if (sqlite3_prepare_v2(m_db, "SELECT category, COUNT(*) FROM accounts GROUP BY category;", -1, &stmt, nullptr) == SQLITE_OK) {
+    // 动态提取并统计所有标签及其包含的条目数
+    std::map<std::wstring, int> tagMap;
+    if (sqlite3_prepare_v2(m_db, "SELECT category FROM accounts;", -1, &stmt, nullptr) == SQLITE_OK) {
         while (sqlite3_step(stmt) == SQLITE_ROW) {
             const void* ptr = sqlite3_column_text16(stmt, 0);
-            int count = sqlite3_column_int(stmt, 1);
             if (ptr) {
                 std::wstring cat(reinterpret_cast<const wchar_t*>(ptr));
-                if (cat == L"工作") stats.workCount = count;
-                else if (cat == L"社交") stats.socialCount = count;
-                else if (cat == L"金融") stats.financeCount = count;
-                else if (cat == L"邮箱") stats.emailCount = count;
-                else if (cat == L"其它") stats.otherCount = count;
+                auto itemTags = SplitTags(cat);
+                if (itemTags.empty()) {
+                    tagMap[L"其它"]++;
+                } else {
+                    for (const auto& t : itemTags) {
+                        tagMap[t]++;
+                    }
+                }
+            } else {
+                tagMap[L"其它"]++;
             }
         }
         sqlite3_finalize(stmt);
     }
+
+    for (const auto& kv : tagMap) {
+        stats.tags.push_back({ kv.first, kv.second });
+        if (kv.first == L"工作") stats.workCount = kv.second;
+        else if (kv.first == L"社交") stats.socialCount = kv.second;
+        else if (kv.first == L"金融") stats.financeCount = kv.second;
+        else if (kv.first == L"邮箱") stats.emailCount = kv.second;
+        else if (kv.first == L"其它") stats.otherCount = kv.second;
+    }
+
+    // 按记录数降序排列，相同数量按名称字典序升序
+    std::sort(stats.tags.begin(), stats.tags.end(), [](const TagStat& a, const TagStat& b) {
+        if (a.count != b.count) return a.count > b.count;
+        return a.name < b.name;
+    });
 
     // DB File Size
     WIN32_FILE_ATTRIBUTE_DATA fad{};
