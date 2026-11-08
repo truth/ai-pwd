@@ -143,11 +143,11 @@ ThemePalette GetThemePalette(ThemeColor color) {
             p.textAccent = "#2563EB";
 
             p.windowBg = "#F1F5F9";
-            p.titleBarBg = "#FFFFFF";
+            p.titleBarBg = "#E2E8F0"; // 浅灰石板色标题栏，绝非纯白，与资源管理器白色底色清晰分明
             p.sidebarBg = "#F8FAFC";
             p.footerBg = "#E2E8F0";
             p.cardBg = "#FFFFFF";
-            p.cardBorder = "#E2E8F0";
+            p.cardBorder = "#CBD5E1";
             p.inputBg = "#F8FAFC";
             p.inputBorder = "#CBD5E1";
             p.innerCardBg = "#F1F5F9";
@@ -160,12 +160,12 @@ ThemePalette GetThemePalette(ThemeColor color) {
 
             p.textPrimary = "#0F172A";
             p.textSecondary = "#475569";
-            p.textMuted = "#94A3B8";
+            p.textMuted = "#64748B";
             p.textInput = "#0F172A";
             p.btnSecondaryFg = "#334155";
 
-            p.dwmBorderColor = RGB(203, 213, 225);
-            p.classBgColor = RGB(241, 245, 249);
+            p.dwmBorderColor = RGB(148, 163, 184); // 明显的石板灰边框，避免与白色资源管理器混淆
+            p.classBgColor = RGB(226, 232, 240);
             break;
 
         case ThemeColor::Blue:
@@ -275,7 +275,7 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
     // -------------------------------------------------------------
     // 1. Top Custom Title Bar (46px)
     // -------------------------------------------------------------
-    xml += "<Panel role=\"titleBar\" hitTest=\"caption\" direction=\"row\" height=\"46\" background=\"" + theme.titleBarBg + "\" padding=\"14,0,14,0\" alignItems=\"center\" justifyContent=\"spaceBetween\">";
+    xml += "<Panel role=\"titleBar\" hitTest=\"caption\" direction=\"row\" height=\"46\" background=\"" + theme.titleBarBg + "\" padding=\"14,0,14,0\" alignItems=\"center\" justifyContent=\"spaceBetween\" border=\"0,0,0,1\" borderColor=\"" + theme.cardBorder + "\">";
     
     // Left: Logo & Title & Security Encryption Badge
     xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"8\" hitTest=\"caption\" height=\"46\">";
@@ -326,9 +326,9 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
 
     // Window Caption Controls (34 + 2 + 34 + 2 + 38 = 110 DIPs)
     xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"2\" hitTest=\"client\" width=\"112\" minWidth=\"112\" padding=\"0,0,0,0\">";
-    xml += "<Button variant=\"caption-minimize\" width=\"34\" height=\"30\" hitTest=\"client\" onClick=\"app:windowMinimize\" />";
-    xml += "<Button variant=\"caption-maximize\" width=\"34\" height=\"30\" hitTest=\"client\" onClick=\"app:windowMaximize\" />";
-    xml += "<Button variant=\"caption-close\" width=\"38\" height=\"30\" hitTest=\"client\" onClick=\"app:windowClose\" />";
+    xml += "<Button variant=\"caption-minimize\" width=\"34\" height=\"30\" hitTest=\"client\" foreground=\"" + theme.btnSecondaryFg + "\" lockColors=\"true\" onClick=\"app:windowMinimize\" />";
+    xml += "<Button variant=\"caption-maximize\" width=\"34\" height=\"30\" hitTest=\"client\" foreground=\"" + theme.btnSecondaryFg + "\" lockColors=\"true\" onClick=\"app:windowMaximize\" />";
+    xml += "<Button variant=\"caption-close\" width=\"38\" height=\"30\" hitTest=\"client\" foreground=\"" + theme.btnSecondaryFg + "\" lockColors=\"true\" onClick=\"app:windowClose\" />";
     xml += "</Panel>";
     xml += "</Panel>"; // Right Title controls
     xml += "</Panel>"; // Title Bar
