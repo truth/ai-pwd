@@ -235,12 +235,30 @@ LRESULT CALLBACK AppController::ShellWndProc(HWND hwnd, UINT msg, WPARAM wParam,
             if (wParam == SIZE_MINIMIZED) {
                 return 0; // Do not resize child to 0x0 while shell is minimized
             }
+
+            bool isNowZoomed = IsZoomed(hwnd);
+            bool zoomChanged = (app && app->m_state.isMaximized != isNowZoomed);
+            if (app) {
+                app->m_state.isMaximized = isNowZoomed;
+            }
+
+            // 1. Maintain rounded window region (square when maximized, 14px rounded when normal)
+            RECT rc{};
+            if (GetClientRect(hwnd, &rc)) {
+                int width = rc.right - rc.left;
+                int height = rc.bottom - rc.top;
+                if (isNowZoomed) {
+                    SetWindowRgn(hwnd, nullptr, TRUE);
+                } else if (width > 0 && height > 0) {
+                    HRGN rgn = CreateRoundRectRgn(0, 0, width + 1, height + 1, 28, 28);
+                    SetWindowRgn(hwnd, rgn, zoomChanged ? TRUE : FALSE);
+                }
+            }
+
+            // 2. Synchronize child host size and caption button state
             if (app && app->m_host && !app->m_host->IsClosed()) {
-                bool isNowZoomed = IsZoomed(hwnd);
-                if (app->m_state.isMaximized != isNowZoomed) {
-                    app->m_state.isMaximized = isNowZoomed;
-                    app->RecreateHost();
-                    return 0;
+                if (zoomChanged) {
+                    app->m_host->SetElementText("win_max_btn", isNowZoomed ? L"❐" : L"□");
                 }
                 HWND childHwnd = app->m_host->GetHwnd();
                 if (childHwnd) {
@@ -250,29 +268,15 @@ LRESULT CALLBACK AppController::ShellWndProc(HWND hwnd, UINT msg, WPARAM wParam,
                     if (!IsWindowVisible(childHwnd)) {
                         ShowWindow(childHwnd, SW_SHOW);
                     }
-                    // Keep child WS_MAXIMIZE style in sync with parent shell so IsZoomed(childHwnd)
-                    // accurately reflects maximized state for caption glyph rendering (restore vs maximize).
+                    // Keep child WS_MAXIMIZE style in sync with parent shell
                     LONG_PTR style = GetWindowLongPtrW(childHwnd, GWL_STYLE);
-                    if (IsZoomed(hwnd)) {
+                    if (isNowZoomed) {
                         SetWindowLongPtrW(childHwnd, GWL_STYLE, style | WS_MAXIMIZE);
                     } else {
                         SetWindowLongPtrW(childHwnd, GWL_STYLE, style & ~WS_MAXIMIZE);
                     }
                 }
                 app->m_host->FitToParent();
-            }
-
-            // Maintain rounded window region (square when maximized, 14px rounded when normal)
-            RECT rc{};
-            if (GetClientRect(hwnd, &rc)) {
-                int width = rc.right - rc.left;
-                int height = rc.bottom - rc.top;
-                if (IsZoomed(hwnd)) {
-                    SetWindowRgn(hwnd, nullptr, FALSE);
-                } else if (width > 0 && height > 0) {
-                    HRGN rgn = CreateRoundRectRgn(0, 0, width + 1, height + 1, 28, 28);
-                    SetWindowRgn(hwnd, rgn, FALSE);
-                }
             }
             return 0;
         }

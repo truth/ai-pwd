@@ -269,8 +269,8 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
     std::string xml;
     xml.reserve(32768);
 
-    // Root window with custom chrome & theme-driven immersive canvas & smooth rounded corners
-    xml += "<Panel chrome=\"custom\" direction=\"column\" background=\"" + theme.windowBg + "\" cornerRadius=\"16\" padding=\"0,0,0,0\" alignItems=\"stretch\">";
+    // Root window with custom chrome & theme-driven immersive canvas
+    xml += "<Panel chrome=\"custom\" direction=\"column\" background=\"" + theme.windowBg + "\" padding=\"0,0,0,0\" alignItems=\"stretch\">";
 
     // -------------------------------------------------------------
     // 1. Top Custom Title Bar (46px)
@@ -346,7 +346,7 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
 
     xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"4\" hitTest=\"client\" width=\"108\" minWidth=\"108\" padding=\"0,0,0,0\">";
     xml += "<Button text=\"—\" fontSize=\"11\" width=\"30\" height=\"28\" background=\"" + capBtnBg + "\" foreground=\"" + capBtnFg + "\" cornerRadius=\"6\" lockColors=\"true\" hitTest=\"client\" onClick=\"app:windowMinimize\" />";
-    xml += "<Button text=\"" + maxGlyph + "\" fontSize=\"13\" width=\"30\" height=\"28\" background=\"" + capBtnBg + "\" foreground=\"" + capBtnFg + "\" cornerRadius=\"6\" lockColors=\"true\" hitTest=\"client\" onClick=\"app:windowMaximize\" />";
+    xml += "<Button name=\"win_max_btn\" id=\"win_max_btn\" text=\"" + maxGlyph + "\" fontSize=\"13\" width=\"30\" height=\"28\" background=\"" + capBtnBg + "\" foreground=\"" + capBtnFg + "\" cornerRadius=\"6\" lockColors=\"true\" hitTest=\"client\" onClick=\"app:windowMaximize\" />";
     xml += "<Button text=\"✕\" fontSize=\"12\" width=\"34\" height=\"28\" background=\"" + closeBtnBg + "\" foreground=\"" + closeBtnFg + "\" cornerRadius=\"6\" lockColors=\"true\" hitTest=\"client\" onClick=\"app:windowClose\" />";
     xml += "</Panel>";
     xml += "</Panel>"; // Right Title controls
