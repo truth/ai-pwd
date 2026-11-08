@@ -261,6 +261,19 @@ LRESULT CALLBACK AppController::ShellWndProc(HWND hwnd, UINT msg, WPARAM wParam,
                 }
                 app->m_host->FitToParent();
             }
+
+            // Maintain rounded window region (square when maximized, 14px rounded when normal)
+            RECT rc{};
+            if (GetClientRect(hwnd, &rc)) {
+                int width = rc.right - rc.left;
+                int height = rc.bottom - rc.top;
+                if (IsZoomed(hwnd)) {
+                    SetWindowRgn(hwnd, nullptr, FALSE);
+                } else if (width > 0 && height > 0) {
+                    HRGN rgn = CreateRoundRectRgn(0, 0, width + 1, height + 1, 28, 28);
+                    SetWindowRgn(hwnd, rgn, FALSE);
+                }
+            }
             return 0;
         }
 
@@ -550,7 +563,7 @@ bool AppController::Initialize(const std::wstring& cmdLine) {
         WS_EX_APPWINDOW,
         kShellClass,
         L"AI 密码生成器与保险库 (AI-Pwd)",
-        WS_POPUP | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU | WS_CLIPCHILDREN,
+        WS_POPUP | WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU | WS_CLIPCHILDREN,
         posX, posY, initialW, initialH,
         nullptr, nullptr, m_instance, this
     );
@@ -563,7 +576,11 @@ bool AppController::Initialize(const std::wstring& cmdLine) {
     DwmExtendFrameIntoClientArea(m_shellWnd, &margins);
     UpdateThemeDwmAttributes();
 
-    // 6. Set App Icon
+    // 6. Set 14px rounded window region
+    HRGN rgn = CreateRoundRectRgn(0, 0, initialW + 1, initialH + 1, 28, 28);
+    SetWindowRgn(m_shellWnd, rgn, FALSE);
+
+    // 7. Set App Icon
     HICON hIcon = LoadIconW(m_instance, MAKEINTRESOURCEW(IDI_APP_ICON));
     if (hIcon) {
         SendMessageW(m_shellWnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
