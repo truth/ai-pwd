@@ -35,18 +35,15 @@ public:
     static constexpr UINT ID_TRAY_EXIT = 2004;
 
 private:
-    static LRESULT CALLBACK ShellWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-    static LRESULT CALLBACK ChildHostSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
+    static LRESULT CALLBACK HostSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
     static void HostActionThunk(const char* actionId, void* user);
 
     void HandleAction(const std::string& id);
     void RecreateHost();
-    void UpdateThemeDwmAttributes();
     void PopulateFormFields();
     void ShowToast(const std::wstring& msg, const std::string& color = "#10B981");
 
     HINSTANCE m_instance = nullptr;
-    HWND m_shellWnd = nullptr;
 
     NOTIFYICONDATAW m_nid{};
     bool m_trayAdded = false;

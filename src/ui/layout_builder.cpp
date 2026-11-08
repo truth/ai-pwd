@@ -269,12 +269,16 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
     std::string xml;
     xml.reserve(32768);
 
-    std::string rootCorner = state.isMaximized ? "0" : "14";
-    std::string titleCorner = state.isMaximized ? "0" : "14,14,0,0";
-    std::string footerCorner = state.isMaximized ? "0" : "0,0,14,14";
+    std::string rootPadding = state.isMaximized ? "0,0,0,0" : "18,18,18,18";
+    std::string cardCorner = state.isMaximized ? "0" : "16";
+    std::string titleCorner = state.isMaximized ? "0" : "16,16,0,0";
+    std::string footerCorner = state.isMaximized ? "0" : "0,0,16,16";
 
-    // Root window with custom chrome & theme-driven immersive canvas & Skia rounded corners
-    xml += "<Panel chrome=\"custom\" direction=\"column\" background=\"" + theme.windowBg + "\" cornerRadius=\"" + rootCorner + "\" padding=\"0,0,0,0\" alignItems=\"stretch\">";
+    // 1. Root Layered Canvas: transparent background for subpixel anti-aliasing & soft card drop shadow
+    xml += "<Panel chrome=\"layered\" direction=\"column\" background=\"transparent\" padding=\"" + rootPadding + "\" spacing=\"0\" alignItems=\"stretch\">";
+
+    // 2. Floating Window Card: anti-aliased rounded card with theme border and background
+    xml += "<Panel direction=\"column\" background=\"" + theme.windowBg + "\" cornerRadius=\"" + cardCorner + "\" border=\"1,1,1,1\" borderColor=\"" + theme.cardBorder + "\" spacing=\"0\" alignItems=\"stretch\" flexGrow=\"1\">";
 
     // -------------------------------------------------------------
     // 1. Top Custom Title Bar (46px)
@@ -1060,7 +1064,8 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
     xml += "</Panel>";
     xml += "</Panel>"; // Footer Status Bar
 
-    xml += "</Panel>"; // Root
+    xml += "</Panel>"; // Floating Window Card
+    xml += "</Panel>"; // Root Layered Canvas
 
     return xml;
 }
