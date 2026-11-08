@@ -242,10 +242,24 @@ LRESULT CALLBACK AppController::ShellWndProc(HWND hwnd, UINT msg, WPARAM wParam,
                 app->m_state.isMaximized = isNowZoomed;
             }
 
-            // Synchronize child host size and caption button state (DWM natively manages hardware anti-aliased rounded corners)
+            // 1. Maintain rounded window region (square when maximized, 14px rounded when normal)
+            RECT rc{};
+            if (GetClientRect(hwnd, &rc)) {
+                int width = rc.right - rc.left;
+                int height = rc.bottom - rc.top;
+                if (isNowZoomed) {
+                    SetWindowRgn(hwnd, nullptr, TRUE);
+                } else if (width > 0 && height > 0) {
+                    HRGN rgn = CreateRoundRectRgn(0, 0, width + 1, height + 1, 28, 28);
+                    SetWindowRgn(hwnd, rgn, zoomChanged ? TRUE : FALSE);
+                }
+            }
+
+            // 2. Synchronize child host size and caption button state
             if (app && app->m_host && !app->m_host->IsClosed()) {
                 if (zoomChanged) {
-                    app->m_host->SetElementText("win_max_btn", isNowZoomed ? L"❐" : L"□");
+                    app->RecreateHost();
+                    return 0;
                 }
                 HWND childHwnd = app->m_host->GetHwnd();
                 if (childHwnd) {
@@ -480,6 +494,9 @@ void AppController::UpdateThemeDwmAttributes() {
 }
 
 bool AppController::Initialize(const std::wstring& cmdLine) {
+    // Force Skia hardware-accelerated anti-aliased renderer backend
+    SetEnvironmentVariableW(L"AI_WIN_UI_RENDERER", L"skia");
+
     // 0. Ensure assets.zip is present next to executable (extract from embedded RC if needed)
     wchar_t exePath[MAX_PATH] = {};
     GetModuleFileNameW(nullptr, exePath, MAX_PATH);
@@ -562,12 +579,16 @@ bool AppController::Initialize(const std::wstring& cmdLine) {
         return false;
     }
 
-    // 5. Initialize DWM shadow & attributes (Hardware anti-aliased rounded corners)
+    // 5. Initialize DWM shadow & attributes
     MARGINS margins{1, 1, 1, 1};
     DwmExtendFrameIntoClientArea(m_shellWnd, &margins);
     UpdateThemeDwmAttributes();
 
-    // 6. Set App Icon
+    // 6. Set 14px rounded window region
+    HRGN rgn = CreateRoundRectRgn(0, 0, initialW + 1, initialH + 1, 28, 28);
+    SetWindowRgn(m_shellWnd, rgn, FALSE);
+
+    // 7. Set App Icon
     HICON hIcon = LoadIconW(m_instance, MAKEINTRESOURCEW(IDI_APP_ICON));
     if (hIcon) {
         SendMessageW(m_shellWnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));

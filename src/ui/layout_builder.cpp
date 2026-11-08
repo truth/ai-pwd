@@ -269,13 +269,17 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
     std::string xml;
     xml.reserve(32768);
 
-    // Root window with custom chrome & theme-driven immersive canvas
-    xml += "<Panel chrome=\"custom\" direction=\"column\" background=\"" + theme.windowBg + "\" padding=\"0,0,0,0\" alignItems=\"stretch\">";
+    std::string rootCorner = state.isMaximized ? "0" : "14";
+    std::string titleCorner = state.isMaximized ? "0" : "14,14,0,0";
+    std::string footerCorner = state.isMaximized ? "0" : "0,0,14,14";
+
+    // Root window with custom chrome & theme-driven immersive canvas & Skia rounded corners
+    xml += "<Panel chrome=\"custom\" direction=\"column\" background=\"" + theme.windowBg + "\" cornerRadius=\"" + rootCorner + "\" padding=\"0,0,0,0\" alignItems=\"stretch\">";
 
     // -------------------------------------------------------------
     // 1. Top Custom Title Bar (46px)
     // -------------------------------------------------------------
-    xml += "<Panel role=\"titleBar\" hitTest=\"caption\" direction=\"row\" height=\"46\" background=\"" + theme.titleBarBg + "\" padding=\"14,0,14,0\" alignItems=\"center\" justifyContent=\"spaceBetween\" border=\"0,0,0,1\" borderColor=\"" + theme.cardBorder + "\">";
+    xml += "<Panel role=\"titleBar\" hitTest=\"caption\" direction=\"row\" height=\"46\" background=\"" + theme.titleBarBg + "\" cornerRadius=\"" + titleCorner + "\" padding=\"14,0,14,0\" alignItems=\"center\" justifyContent=\"spaceBetween\" border=\"0,0,0,1\" borderColor=\"" + theme.cardBorder + "\">";
     
     // Left: Logo & Title & Security Encryption Badge
     xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"8\" hitTest=\"caption\" height=\"46\">";
@@ -1043,16 +1047,16 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
     xml += "</Panel>"; // Main Body
 
     // -------------------------------------------------------------
-    // 3. Footer Status Bar (26px)
+    // 3. Footer Status Bar (26px) with Skia bottom rounded corners
     // -------------------------------------------------------------
-    xml += "<Panel direction=\"row\" height=\"26\" background=\"" + theme.footerBg + "\" padding=\"0,16,0,16\" alignItems=\"center\" justifyContent=\"spaceBetween\">";
+    xml += "<Panel direction=\"row\" height=\"26\" background=\"" + theme.footerBg + "\" cornerRadius=\"" + footerCorner + "\" padding=\"0,16,0,16\" alignItems=\"center\" justifyContent=\"spaceBetween\">";
     xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"8\">";
     xml += "<Panel width=\"6\" height=\"6\" cornerRadius=\"3\" background=\"#10B981\" />";
-    xml += "<Label text=\"安全沙箱环境运行中   |   无剪贴板外泄窃取监听\" fontSize=\"11\" color=\"" + theme.textMuted + "\" width=\"320\" />";
+    xml += "<Label text=\"安全沙箱环境运行中   |   无剪贴板外泄窃取监听\" fontSize=\"11\" color=\"" + theme.textMuted + "\" width=\"300\" />";
     xml += "</Panel>";
 
     xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"8\">";
-    xml += "<Label text=\"算法 : CSPRNG + Argon2id   |   v2.4.0-desktop\" fontSize=\"11\" color=\"" + theme.textMuted + "\" width=\"280\" align=\"right\" />";
+    xml += "<Label text=\"渲染引擎 : Skia (抗锯齿)   |   算法 : CSPRNG + Argon2id\" fontSize=\"11\" color=\"" + theme.textMuted + "\" width=\"320\" align=\"right\" />";
     xml += "</Panel>";
     xml += "</Panel>"; // Footer Status Bar
 
