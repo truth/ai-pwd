@@ -103,6 +103,9 @@ struct AppUiState {
 
     // Overall stats
     VaultStats stats;
+
+    // Window maximized state
+    bool isMaximized = false;
 };
 
 class LayoutBuilder {

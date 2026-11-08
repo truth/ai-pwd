@@ -324,11 +324,30 @@ std::string LayoutBuilder::BuildMainLayout(const AppUiState& state, const std::v
     }
     xml += "</Panel>"; // Theme Switcher
 
-    // Window Caption Controls (34 + 2 + 34 + 2 + 38 = 110 DIPs)
-    xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"2\" hitTest=\"client\" width=\"112\" minWidth=\"112\" padding=\"0,0,0,0\">";
-    xml += "<Button variant=\"caption-minimize\" width=\"34\" height=\"30\" hitTest=\"client\" foreground=\"" + theme.btnSecondaryFg + "\" lockColors=\"true\" onClick=\"app:windowMinimize\" />";
-    xml += "<Button variant=\"caption-maximize\" width=\"34\" height=\"30\" hitTest=\"client\" foreground=\"" + theme.btnSecondaryFg + "\" lockColors=\"true\" onClick=\"app:windowMaximize\" />";
-    xml += "<Button variant=\"caption-close\" width=\"38\" height=\"30\" hitTest=\"client\" foreground=\"" + theme.btnSecondaryFg + "\" lockColors=\"true\" onClick=\"app:windowClose\" />";
+    // Window Caption Controls (High-contrast, clearly visible in all themes)
+    std::string capBtnBg;
+    std::string capBtnFg;
+    std::string closeBtnBg;
+    std::string closeBtnFg;
+
+    if (state.theme == ThemeColor::Light) {
+        capBtnBg = "#CBD5E1";      // Slate-300 on Slate-200 titlebar
+        capBtnFg = "#0F172A";      // Deep black icon
+        closeBtnBg = "#FEE2E2";    // Soft rose-red background
+        closeBtnFg = "#DC2626";    // Strong red cross icon
+    } else {
+        capBtnBg = theme.btnSecondaryBg;
+        capBtnFg = "#F8FAFC";      // Bright white icon
+        closeBtnBg = "#3B1818";    // Dark red background
+        closeBtnFg = "#EF4444";    // Bright red cross icon
+    }
+
+    std::string maxGlyph = state.isMaximized ? "❐" : "□";
+
+    xml += "<Panel direction=\"row\" alignItems=\"center\" spacing=\"4\" hitTest=\"client\" width=\"108\" minWidth=\"108\" padding=\"0,0,0,0\">";
+    xml += "<Button text=\"—\" fontSize=\"11\" width=\"30\" height=\"28\" background=\"" + capBtnBg + "\" foreground=\"" + capBtnFg + "\" cornerRadius=\"6\" lockColors=\"true\" hitTest=\"client\" onClick=\"app:windowMinimize\" />";
+    xml += "<Button text=\"" + maxGlyph + "\" fontSize=\"13\" width=\"30\" height=\"28\" background=\"" + capBtnBg + "\" foreground=\"" + capBtnFg + "\" cornerRadius=\"6\" lockColors=\"true\" hitTest=\"client\" onClick=\"app:windowMaximize\" />";
+    xml += "<Button text=\"✕\" fontSize=\"12\" width=\"34\" height=\"28\" background=\"" + closeBtnBg + "\" foreground=\"" + closeBtnFg + "\" cornerRadius=\"6\" lockColors=\"true\" hitTest=\"client\" onClick=\"app:windowClose\" />";
     xml += "</Panel>";
     xml += "</Panel>"; // Right Title controls
     xml += "</Panel>"; // Title Bar

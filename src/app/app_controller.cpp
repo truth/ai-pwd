@@ -236,6 +236,12 @@ LRESULT CALLBACK AppController::ShellWndProc(HWND hwnd, UINT msg, WPARAM wParam,
                 return 0; // Do not resize child to 0x0 while shell is minimized
             }
             if (app && app->m_host && !app->m_host->IsClosed()) {
+                bool isNowZoomed = IsZoomed(hwnd);
+                if (app->m_state.isMaximized != isNowZoomed) {
+                    app->m_state.isMaximized = isNowZoomed;
+                    app->RecreateHost();
+                    return 0;
+                }
                 HWND childHwnd = app->m_host->GetHwnd();
                 if (childHwnd) {
                     if (IsIconic(childHwnd)) {
@@ -646,6 +652,7 @@ void AppController::RecreateHost() {
     // 2. Query items and build layout
     auto items = m_db.QueryItems(m_state.searchQuery, m_state.selectedCategory, (m_state.activeTab == ActiveTab::Favorites));
     m_state.stats = m_db.GetStats();
+    m_state.isMaximized = (m_shellWnd && IsZoomed(m_shellWnd));
 
     std::string xml = LayoutBuilder::BuildMainLayout(m_state, items);
 
